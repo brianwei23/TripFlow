@@ -1,9 +1,10 @@
-<h2>Login Page</h2>
+<div class="login-container">
+    <h2>Login Page</h2>
 
-<input type="email" [(ngModel)]="email" placeholder="Email">
-<input type="password" [(ngModel)]="password" placeholder="Password">
-<button (click)="login()">Login</button>
-
-<p>
-    Don't have an account? <a routerLink="/register">Register here</a>.
-</p>
+    <input type="email" [(ngModel)]="email" placeholder="Email">
+    <input type="password" [(ngModel)]="password" placeholder="Password">
+    <button (click)="login()">Login</button>
+    <p>
+        Don't have an account? <a routerLink="/register">Register here</a>.
+    </p>
+</div>

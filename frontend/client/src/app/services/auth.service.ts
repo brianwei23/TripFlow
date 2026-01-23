@@ -1,29 +1,29 @@
 import { Injectable } from '@angular/core';
+import { Auth } from '@angular/fire/auth';
 import {
-    Auth,
     createUserWithEmailAndPassword,
     signInWithEmailAndPassword,
-    signOut
-} from '@angular/fire/auth';
+    signOut,
+    UserCredential
+} from 'firebase/auth';
 
 // Globally available service
 @Injectable({ providedIn: 'root' })
 export class AuthService {
 
-    // Injects Auth service
     constructor(private auth: Auth) {}
 
     // Create user
-    register(email: string, password: string) {
+    register(email: string, password: string): Promise<UserCredential> {
         return createUserWithEmailAndPassword(this.auth, email, password);
     }
 
     // Login user with email and password
-    login(email: string, password: string) {
+    login(email: string, password: string): Promise<UserCredential> {
         return signInWithEmailAndPassword(this.auth, email, password);
     }
 
-    logout() {
+    logout(): Promise<void> {
         return signOut(this.auth);
     }
 }
