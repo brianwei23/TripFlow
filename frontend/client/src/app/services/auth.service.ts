@@ -4,7 +4,8 @@ import {
     createUserWithEmailAndPassword,
     signInWithEmailAndPassword,
     signOut,
-    UserCredential
+    UserCredential,
+    sendEmailVerification
 } from 'firebase/auth';
 
 // Globally available service
@@ -14,8 +15,13 @@ export class AuthService {
     constructor(private auth: Auth) {}
 
     // Create user
-    register(email: string, password: string): Promise<UserCredential> {
-        return createUserWithEmailAndPassword(this.auth, email, password);
+    async register(email: string, password: string): Promise<UserCredential> {
+        // Account creation
+        const cred = await createUserWithEmailAndPassword(this.auth, email, password);
+
+        await sendEmailVerification(cred.user);
+
+        return cred;
     }
 
     // Login user with email and password

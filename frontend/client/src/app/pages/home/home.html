@@ -1,1 +1,11 @@
-<h1>Travel Guide</h1>
+<h1>Travel Planner</h1>
+<button class="logout-btn" (click)="logout()">Logout</button>
+
+<button class="add-day-btn" (click)="addDay()">+ Add Day</button>
+<div class="days-container">
+    <div class="day-column" *ngFor="let day of days; let i = index">
+        <input type="date" [(ngModel)]="day.date" placeholder="Select date">
+        <input type="text" [(ngModel)]="day.activity" placeholder="Activity"/>
+        <input type="number" [(ngModel)]="day.plannedBudget" placeholder="Planned Budget">
+    </div>
+</div>

@@ -21,7 +21,15 @@ export class LoginComponent {
 
     login(){
         this.authService.login(this.email, this.password)
-        .then(() => this.router.navigate(['/']))
+            .then((cred) => {
+                // If email not verified, then don't allow login.
+            if (!cred.user.emailVerified) {
+                alert('Please verify your email first.');
+                return;
+            }
+            // If email verified, then go to home page. 
+            this.router.navigate(['/home']);
+        })
         .catch(err => alert(err.message));
     }
 }

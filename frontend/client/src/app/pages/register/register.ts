@@ -30,7 +30,10 @@ export class RegisterComponent {
     }
     // Calling Firebase Auth
     this.auth.register(this.email, this.password)
-      .then(() => this.router.navigate(['/home']))
+      .then(() => {
+        alert('An email has been sent to your address for verification.');
+        this.router.navigate(['/login']);
+      })
       .catch(error => {
         // Duplicate email check
         if (error.code === 'auth/email-already-in-use') {
