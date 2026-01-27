@@ -1,11 +1,97 @@
 <h1>Travel Planner</h1>
+
 <button class="logout-btn" (click)="logout()">Logout</button>
 
-<button class="add-day-btn" (click)="addDay()">+ Add Day</button>
-<div class="days-container">
-    <div class="day-column" *ngFor="let day of days; let i = index">
-        <input type="date" [(ngModel)]="day.date" placeholder="Select date">
-        <input type="text" [(ngModel)]="day.activity" placeholder="Activity"/>
-        <input type="number" [(ngModel)]="day.plannedBudget" placeholder="Planned Budget">
+@if (!firstDayAdded) {
+    <div class="add-day-container">
+        <input type="date" [(ngModel)]="selectedDate" />
+        <button class="add-day-btn" (click)="addDay()">+ Add Day</button>
     </div>
-</div>
+}
+
+@if (showTimePicker) {
+ <div class="time-picker">
+     <h3>Select Time Range for {{selectedDate}}</h3>
+     <label>
+         Start time:
+         <input type="time" [(ngModel)]="tempStartTime">
+     </label>
+    
+     <label>
+         End time:
+         <input type="time" [(ngModel)]="tempEndTime">
+     </label>
+     <button (click)="confirmTimeRange()">Confirm</button>
+ </div>
+}
+
+@for (day of days; track $index) {
+  <div class="day-card">
+    <h3>
+      Day Schedule ({{ formatHourString(day.startTime) }} - {{ formatHourString(day.endTime) }})
+    </h3>
+
+    <input type="date" [(ngModel)]="day.date" />
+
+    <div class="schedule">
+      @for (slot of day.slots; track $index) {
+        <div class="hour-row">
+          <div class="hour-label">
+            {{ slot.hourLabel }}
+          </div>
+
+          @if (!slot.isEditing && !slot.activity) {
+            <button (click)="slot.isEditing = true">
+              + Add activity
+            </button>
+          }
+
+          @if (slot.isEditing) {
+            <div class="activity-form">
+              <input
+                type="text"
+                placeholder="Activity"
+                [(ngModel)]="slot.activity"
+              />
+
+              <input
+                type="time"
+                [(ngModel)]="slot.activityStart"
+              />
+
+              <input
+                type="time"
+                [(ngModel)]="slot.activityEnd"
+              />
+
+              <input
+                type="number"
+                placeholder="Budget"
+                [(ngModel)]="slot.budget"
+              />
+
+              <button (click)="slot.isEditing = false">
+                Save
+              </button>
+            </div>
+          }
+
+          @if (!slot.isEditing && slot.activity) {
+            <div class="activity-summary">
+              <strong>{{ slot.activity }}</strong><br />
+              {{ slot.activityStart }} - {{ slot.activityEnd }}<br />
+               ${{ slot.budget }}
+            </div>
+          }
+        </div>
+      }
+    </div>
+  </div>
+}
+
+@if (firstDayAdded) {
+    <div class="next-prev-buttons">
+        <button class="add-day-btn" (click)="navigateToDayPage('prev')">+Add Past Day</button>
+        <button class="add-day-btn" (click)="navigateToDayPage('next')">+Add Future Day</button>
+    </div>
+}

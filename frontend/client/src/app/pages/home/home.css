@@ -4,8 +4,49 @@ h1 {
     font-size: 2.5rem;
 }
 
+.add-day-container,.next-prev-buttons {
+    display: flex;
+    justify-content: center;
+    margin: 20px 0;
+    gap: 16px;
+}
+
+.next-prev-buttons .add-day-btn {
+    background-color: #4caf50;
+}
+
 .add-day-btn {
-    margin-bottom: 16px;
+    padding: 10px 20px;
+    background-color: #4caf50;
+    color: white;
+    font-weight: bold;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.add-day-btn:hover {
+    background-color: #45a049;
+}
+
+.logout-btn {
+    padding: 8px 16px;
+    background-color: #f44336;
+    color: white;
+    font-weight: bold;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1000;
+}
+
+.logout-btn:hover {
+    background-color: #da190b;
 }
 
 .days-container {
@@ -27,4 +68,35 @@ h1 {
     padding: 8px;
     font-weight: bold;
     text-align: center;
+}
+
+.time-picker {
+    border: 1px solid #ddd;
+    padding: 12px;
+    margin-bottom: 16px;
+    border-radius: 8px;
+    background: #f5f5f5;
+}
+
+.time-range {
+    font-weight: bold;
+    text-align: center;
+    margin-bottom: 8px;
+}
+
+.schedule {
+    border-top: 1px solid #ccc;
+}
+
+.hour-row {
+    border-bottom: 1px solid #ccc; /* the line between slots */
+    padding: 8px 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.hour-label {
+    min-width: 100px;
+    font-weight: bold;
 }
