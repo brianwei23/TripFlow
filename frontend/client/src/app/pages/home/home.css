@@ -46,9 +46,19 @@ h3 {
 }
 
 .activity-summary {
+    background: #f1f1f1;
+    padding: 6px 12px;
+    border-radius: 6px;
     text-align: center;
-    margin-left: 37%;
-    margin-right: auto;
+    width: fit-content;
+}
+
+.activities-column {
+    display: flex;
+    flex-direction: column; /* vertical stack */
+    gap: 6px;
+    flex: 1;
+    align-items: center;
 }
 
 .logout-btn {
@@ -110,14 +120,24 @@ h3 {
 }
 
 .hour-row {
-    border-bottom: 1px solid #ccc; /* the line between slots */
-    padding: 8px 0;
     display: flex;
-    align-items: center;
-    gap: 8px;
+    align-items: flex-start;
+    gap: 12px;
 }
 
 .hour-label {
-    min-width: 100px;
+    width: 140px;
     font-weight: bold;
+    flex-shrink: 0;
+}
+
+.save-btn {
+    padding: 6px 14px;
+    background-color: #008cba;
+    color: white;
+    font-weight: 600;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.2s ease, transform 0.1s ease;
 }

@@ -40,13 +40,15 @@
             {{ slot.hourLabel }}
           </div>
 
-          @for (act of slot.activities; track act.name) {
-            <div class="activity-summary">
-              <strong>{{ act.name }}</strong><br />
-              {{ formatHourString(act.start!) }} - {{ formatHourString(act.end!) }}<br />
-              <b>Expected budget: </b>${{ act.budget }}
-            </div>
-          }
+          <div class="activities-column">
+            @for (act of slot.activities; track act.name) {
+              <div class="activity-summary">
+                <strong>{{ act.name }}</strong><br />
+                {{ formatHourString(act.start!) }} - {{ formatHourString(act.end!) }}<br />
+                <b>Expected budget: </b>${{ act.budget }}
+              </div>
+            }
+          </div>
 
           @if (slot.isEditing) {
             <div class="activity-form">
@@ -72,7 +74,7 @@
                 [(ngModel)]="slot.tempActivity.budget"
               />
 
-              <button (click)="saveActivity(slot)">
+              <button class="save-btn" (click)="saveActivity(slot)">
                 Save
               </button>
             </div>

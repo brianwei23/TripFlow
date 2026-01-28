@@ -93,10 +93,17 @@ export class HomeComponent {
   }
 
   saveActivity(slot: HourSlot) {
-    if (!slot.tempActivity || !slot.tempActivity.name) return;
-    // Add activity to the array
-    slot.activities.push({ ...slot.tempActivity});
-    // Reset temp and close form
+    const act = slot.tempActivity;
+
+    if (!act || !act.name) return;
+
+    if (act.start && act.end && act.start >= act.end) {
+      alert('Activity start time must be before end time.');
+      return;
+    }
+
+    slot.activities.push({...act});
+
     slot.tempActivity = { name: '', start: '', end: '', budget: undefined };
     slot.isEditing = false;
   }
