@@ -25,7 +25,7 @@
  </div>
 }
 
-@for (day of days; track $index) {
+@for (day of days; track day.date) {
   <div class="day-card">
     <h3>
       Day Schedule ({{ formatHourString(day.startTime) }} - {{ formatHourString(day.endTime) }})
@@ -34,16 +34,18 @@
     <input type="date" [(ngModel)]="day.date" />
 
     <div class="schedule">
-      @for (slot of day.slots; track $index) {
+      @for (slot of day.slots; track slot.hourLabel) {
         <div class="hour-row">
           <div class="hour-label">
             {{ slot.hourLabel }}
           </div>
 
-          @if (!slot.isEditing && !slot.activity) {
-            <button (click)="slot.isEditing = true">
-              + Add activity
-            </button>
+          @for (act of slot.activities; track act.name) {
+            <div class="activity-summary">
+              <strong>{{ act.name }}</strong><br />
+              {{ formatHourString(act.start!) }} - {{ formatHourString(act.end!) }}<br />
+              <b>Expected budget: </b>${{ act.budget }}
+            </div>
           }
 
           @if (slot.isEditing) {
@@ -51,38 +53,35 @@
               <input
                 type="text"
                 placeholder="Activity"
-                [(ngModel)]="slot.activity"
+                [(ngModel)]="slot.tempActivity.name"
               />
 
               <input
                 type="time"
-                [(ngModel)]="slot.activityStart"
+                [(ngModel)]="slot.tempActivity.start"
               />
 
               <input
                 type="time"
-                [(ngModel)]="slot.activityEnd"
+                [(ngModel)]="slot.tempActivity.end"
               />
 
               <input
                 type="number"
-                placeholder="Budget"
-                [(ngModel)]="slot.budget"
+                placeholder="Expected budget"
+                [(ngModel)]="slot.tempActivity.budget"
               />
 
-              <button (click)="slot.isEditing = false">
+              <button (click)="saveActivity(slot)">
                 Save
               </button>
             </div>
           }
 
-          @if (!slot.isEditing && slot.activity) {
-            <div class="activity-summary">
-              <strong>{{ slot.activity }}</strong><br />
-              {{ slot.activityStart }} - {{ slot.activityEnd }}<br />
-               ${{ slot.budget }}
-            </div>
-          }
+          <!-- Adds more activities -->
+          <button class="add-activity-btn" *ngIf="!slot.isEditing" (click)="slot.isEditing = true">
+            + Add Activity
+          </button> 
         </div>
       }
     </div>

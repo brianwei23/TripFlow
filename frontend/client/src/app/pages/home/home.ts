@@ -2,15 +2,22 @@ import { Component, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../services/auth.service';
 import { Router } from '@angular/router';
+import { CommonModule } from '@angular/common';
 
 interface HourSlot {
   hourLabel: string;
-  activity?: string;
-  activityStart?: string;
-  activityEnd?: string;
-  budget?: number;
+  activities: Activity[];
+  tempActivity: Activity;
   isEditing: boolean;
 }
+
+interface Activity {
+  name: string;
+  start?: string;
+  end?: string;
+  budget?: number;
+}
+
 interface DayPlan {
   date: string;
   startTime: string;
@@ -20,7 +27,7 @@ interface DayPlan {
 
 @Component({
   selector: 'app-home',
-  imports: [FormsModule],
+  imports: [FormsModule, CommonModule],
   standalone: true,
   templateUrl: './home.html',
   styleUrls: ['./home.css'],
@@ -66,7 +73,9 @@ export class HomeComponent {
       const label = `${this.formatHourString(`${String(currentHour).padStart(2, '0')}:${String(currentMin).padStart(2, '0')}`)} - ${this.formatHourString(`${String(nextHour).padStart(2, '0')}:${String(nextMin).padStart(2, '0')}`)}`;
       slots.push({
         hourLabel: label,
-        isEditing: false
+        isEditing: false,
+        activities: [],
+        tempActivity: {name: '', start: '', end: '', budget: 0}
       });
       currentHour = nextHour;
       currentMin = nextMin;
@@ -81,6 +90,15 @@ export class HomeComponent {
       return;
     }
     this.showTimePicker = true;
+  }
+
+  saveActivity(slot: HourSlot) {
+    if (!slot.tempActivity || !slot.tempActivity.name) return;
+    // Add activity to the array
+    slot.activities.push({ ...slot.tempActivity});
+    // Reset temp and close form
+    slot.tempActivity = { name: '', start: '', end: '', budget: undefined };
+    slot.isEditing = false;
   }
 
   confirmTimeRange() {

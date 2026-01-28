@@ -4,6 +4,10 @@ h1 {
     font-size: 2.5rem;
 }
 
+h3 {
+    text-align: center;
+}
+
 .add-day-container,.next-prev-buttons {
     display: flex;
     justify-content: center;
@@ -28,6 +32,23 @@ h1 {
 
 .add-day-btn:hover {
     background-color: #45a049;
+}
+
+.add-activity-btn {
+    padding: 6px 14px;
+    background-color: green;
+    color: white;
+    font-weight: 600;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.2s ease, transform 0.1s ease;
+}
+
+.activity-summary {
+    text-align: center;
+    margin-left: 37%;
+    margin-right: auto;
 }
 
 .logout-btn {
