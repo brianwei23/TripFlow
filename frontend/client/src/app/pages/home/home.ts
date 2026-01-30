@@ -3,7 +3,8 @@ import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../services/auth.service';
 import { Router, ActivatedRoute, RouterModule } from '@angular/router';
 import { CommonModule } from '@angular/common';
-import { Firestore, collection, doc, getDoc, setDoc } from '@angular/fire/firestore';
+import { Firestore } from '@angular/fire/firestore';
+import { collection, doc, getDoc, setDoc } from 'firebase/firestore';
 
 interface HourSlot {
   hourLabel: string;
@@ -55,17 +56,38 @@ export class HomeComponent {
   ngOnInit() {
     this.route.params.subscribe(async params => {
       const dateParam = params['date'];
-      if(!dateParam) return;
+      if(!dateParam) {
+        this.firstDayAdded = false;
+        this.showTimePicker = false;
+        this.days = [];
+        return;
+      }  
 
       this.selectedDate = dateParam;
+
+      const navState = history.state as {preloadedDay: DayPlan};
+
+      if (navState && navState.preloadedDay && navState.preloadedDay.date === dateParam) {
+        console.log('Loading day from Route State (Immediate)');
+        this.days = [navState.preloadedDay];
+        this.currentDayIndex = 0;
+        this.firstDayAdded = true;
+        this.showTimePicker = false;
+        return;
+      }
+
+      console.log('Loading day from Firebase');
 
       const dayFromDb = await this.loadDayFromFirebase(dateParam);
       if (dayFromDb) {
         this.days = [dayFromDb];
+        this.currentDayIndex = 0;
+        this.firstDayAdded = true;
         this.showTimePicker = false;
       } else {
-        this.showTimePicker = true;
         this.days = [];
+        this.firstDayAdded = false;
+        this.showTimePicker = true;
       }
     });
   }
@@ -196,6 +218,8 @@ export class HomeComponent {
       return a.start.localeCompare(b.start);
     });
 
+    this.saveDayToFirebase(this.days[0]);
+
     slot.tempActivity = { name: '', start: '', end: '', budget: undefined };
     slot.isEditing = false;
   }
@@ -223,11 +247,9 @@ export class HomeComponent {
 
     await this.saveDayToFirebase(newDay);
 
-    // Resetting the picker values
-    this.showTimePicker = false;
-    this.tempStartTime = '';
-    this.tempEndTime = '';
-    this.days = [newDay];
+    this.router.navigate(['/day', this.selectedDate], {
+      state: {preloadedDay: newDay}
+    });
   }
 
   navigateToDay(direction: 'next' | 'prev') {

@@ -61,6 +61,26 @@ h3 {
     align-items: center;
 }
 
+.add-activity-wrapper {
+    margin-top: 8px;
+    margin-bottom: 16px;
+}
+
+.confirm-time-btn {
+    padding: 6px 16px;
+    font-size: 0.9rem;
+    min-width: 110px;
+    background-color: blue;
+    border-radius: 15%;
+    margin-left: clamp(80px, 25%, 150px);
+}
+
+.confirm-row {
+    display: flex;
+    justify-content: flex-start;
+    margin-top: 12px;
+}
+
 .logout-btn {
     padding: 8px 16px;
     background-color: #f44336;

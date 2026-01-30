@@ -21,7 +21,9 @@
          End time:
          <input type="time" [(ngModel)]="tempEndTime">
      </label>
-     <button (click)="confirmTimeRange()">Confirm</button>
+     <div class="confirm-row">
+      <button class="confirm-time-btn" type="button" (click)="confirmTimeRange()">Confirm</button>
+     </div>
  </div>
 }
 
@@ -81,11 +83,13 @@
           }
 
           <!-- Adds more activities -->
-          <button class="add-activity-btn" *ngIf="!slot.isEditing" (click)="slot.isEditing = true">
-            + Add Activity
-          </button> 
-        </div>
-      }
+          <div class="add-activity-wrapper"> 
+            <button class="add-activity-btn" *ngIf="!slot.isEditing" (click)="slot.isEditing = true">
+              + Add Activity
+            </button> 
+          </div>
+          </div>
+        }
     </div>
   </div>
 }

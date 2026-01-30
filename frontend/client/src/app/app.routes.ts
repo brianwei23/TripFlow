@@ -8,7 +8,7 @@ export const routes: Routes = [
     { path: 'login', component: LoginComponent },
     { path: 'register', component: RegisterComponent },
     { path: 'home', component: HomeComponent, canActivate: [AuthGuard] }, // AuthGuard prevents back button usage after logout
-    { path: 'add-day/:direction', component: HomeComponent, canActivate: [AuthGuard] },
+    { path: 'day/:date', component: HomeComponent, canActivate: [AuthGuard] },
     // Default path
     { path: '', redirectTo: 'login', pathMatch: 'full' }
 ];
