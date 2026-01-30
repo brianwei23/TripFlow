@@ -1,10 +1,10 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, ChangeDetectorRef } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../services/auth.service';
 import { Router, ActivatedRoute, RouterModule } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { Firestore } from '@angular/fire/firestore';
-import { collection, doc, getDoc, setDoc } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, setDoc } from 'firebase/firestore';
 
 interface HourSlot {
   hourLabel: string;
@@ -36,6 +36,7 @@ interface DayPlan {
 })
 export class HomeComponent {
   days: DayPlan[] = [];
+  private cdr = inject(ChangeDetectorRef);
 
   private auth = inject(AuthService);
   private router = inject(Router);
@@ -53,43 +54,51 @@ export class HomeComponent {
 
   private route = inject(ActivatedRoute);
 
+
+  isHomePage: boolean = false;
+
   ngOnInit() {
     this.route.params.subscribe(async params => {
       const dateParam = params['date'];
-      if(!dateParam) {
-        this.firstDayAdded = false;
-        this.showTimePicker = false;
-        this.days = [];
-        return;
-      }  
+      
+      if (dateParam) {
+        this.isHomePage = false;
 
-      this.selectedDate = dateParam;
+        this.selectedDate = dateParam;
 
-      const navState = history.state as {preloadedDay: DayPlan};
+        const navState = history.state as {preloadedDay: DayPlan};
 
-      if (navState && navState.preloadedDay && navState.preloadedDay.date === dateParam) {
-        console.log('Loading day from Route State (Immediate)');
-        this.days = [navState.preloadedDay];
-        this.currentDayIndex = 0;
-        this.firstDayAdded = true;
-        this.showTimePicker = false;
-        return;
-      }
+        if (navState && navState.preloadedDay && navState.preloadedDay.date === dateParam) {
+          console.log('Loading day from Route State (Immediate)');
+          this.days = [navState.preloadedDay];
+          this.currentDayIndex = 0;
+          this.firstDayAdded = true;
+          this.showTimePicker = false;
+          this.cdr.detectChanges(); // Refresh UI
+          return;
+        }
 
-      console.log('Loading day from Firebase');
+        console.log('Loading day from Firebase');
 
-      const dayFromDb = await this.loadDayFromFirebase(dateParam);
-      if (dayFromDb) {
-        this.days = [dayFromDb];
-        this.currentDayIndex = 0;
-        this.firstDayAdded = true;
-        this.showTimePicker = false;
+        const dayFromDb = await this.loadDayFromFirebase(dateParam);
+        if (dayFromDb) {
+          this.days = [dayFromDb];
+          this.currentDayIndex = 0;
+          this.firstDayAdded = true;
+          this.showTimePicker = false;
+        } else {
+          this.days = [];
+          this.firstDayAdded = false;
+          this.showTimePicker = true;
+        }
       } else {
+        this.isHomePage = true;
         this.days = [];
-        this.firstDayAdded = false;
-        this.showTimePicker = true;
+        await this.loadAllDays();
+        this.showTimePicker = false;
       }
-    });
+      this.cdr.detectChanges(); // Forc UI refresh after any route change/data load
+      });
   }
 
   async saveDayToFirebase(day: DayPlan) {
@@ -259,6 +268,24 @@ export class HomeComponent {
 
     const newDate = current.toISOString().split('T')[0];
     this.router.navigate(['/day', newDate]);
+  }
+
+  async loadAllDays() {
+    const daysCol = collection(this.firestore, 'days');
+    const snapshot = await getDocs(daysCol);
+    this.days = snapshot.docs
+      .map(doc => doc.data() as DayPlan)
+      .sort((a, b) => a.date.localeCompare(b.date));
+    this.firstDayAdded = this.days.length > 0;
+    console.log('Days loaded for homepage:', this.days.length)
+    this.cdr.detectChanges();
+  }
+
+  goToDay(date: string) {
+    const day = this.days.find(d => d.date === date);
+    this.router.navigate(['/day', date], {
+      state: {preloadedDay: day}
+    });
   }
 
   logout() {

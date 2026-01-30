@@ -2,100 +2,112 @@
 
 <button class="logout-btn" (click)="logout()">Logout</button>
 
-@if (!firstDayAdded) {
-    <div class="add-day-container">
-        <input type="date" [(ngModel)]="selectedDate" />
-        <button class="add-day-btn" (click)="addDay()">+ Add Day</button>
-    </div>
-}
-
-@if (showTimePicker) {
- <div class="time-picker">
-     <h3>Select Time Range for {{selectedDate}}</h3>
-     <label>
+@if (isHomePage) {
+  <div class="add-day-container">
+    <input type="date" [(ngModel)]="selectedDate" />
+    <button class="add-day-btn" (click)="addDay()">+ Add New Day</button>
+  </div>
+  
+  @if (showTimePicker) {
+    <div class="time-picker">
+      <h3>Select Time Range for {{selectedDate}}</h3>
+      <label>
          Start time:
          <input type="time" [(ngModel)]="tempStartTime">
-     </label>
+      </label>
     
-     <label>
+      <label>
          End time:
          <input type="time" [(ngModel)]="tempEndTime">
-     </label>
-     <div class="confirm-row">
-      <button class="confirm-time-btn" type="button" (click)="confirmTimeRange()">Confirm</button>
-     </div>
- </div>
-}
-
-@for (day of days; track day.date) {
-  <div class="day-card">
-    <h3>
-      {{day.date}} Schedule ({{ formatHourString(day.startTime) }} - {{ formatHourString(day.endTime) }})
-    </h3>
-
-    <input type="date" [(ngModel)]="day.date" />
-
-    <div class="schedule">
-      @for (slot of day.slots; track slot.hourLabel) {
-        <div class="hour-row">
-          <div class="hour-label">
-            {{ slot.hourLabel }}
-          </div>
-
-          <div class="activities-column">
-            @for (act of slot.activities; track act.name) {
-              <div class="activity-summary">
-                <strong>{{ act.name }}</strong><br />
-                {{ formatHourString(act.start!) }} - {{ formatHourString(act.end!) }}<br />
-                <b>Expected budget: </b>${{ act.budget }}
-              </div>
-            }
-          </div>
-
-          @if (slot.isEditing) {
-            <div class="activity-form">
-              <input
-                type="text"
-                placeholder="Activity"
-                [(ngModel)]="slot.tempActivity.name"
-              />
-
-              <input
-                type="time"
-                [(ngModel)]="slot.tempActivity.start"
-              />
-
-              <input
-                type="time"
-                [(ngModel)]="slot.tempActivity.end"
-              />
-
-              <input
-                type="number"
-                placeholder="Expected budget"
-                [(ngModel)]="slot.tempActivity.budget"
-              />
-
-              <button class="save-btn" (click)="saveActivity(slot)">
-                Save
-              </button>
-            </div>
-          }
-
-          <!-- Adds more activities -->
-          <div class="add-activity-wrapper"> 
-            <button class="add-activity-btn" *ngIf="!slot.isEditing" (click)="slot.isEditing = true">
-              + Add Activity
-            </button> 
-          </div>
-          </div>
-        }
+      </label>
+      <div class="confirm-row">
+        <button class="confirm-time-btn" type="button" (click)="confirmTimeRange()">Confirm</button>
+      </div>
     </div>
+  }
+
+  <div class="days-container">
+    @for (day of days; track day.date) {
+      <div class="day-tile" (click)="goToDay(day.date)">
+        <h3>{{day.date}}</h3>
+        <p>{{ formatHourString(day.startTime) }} - {{ formatHourString(day.endTime) }}</p>
+      </div>
+    }
+    @if (days.length === 0) {
+      <p style="text-align: center; margin-top: 20px; color: #666;">No trips have been planned yet. Please add a day.</p>
+    }
   </div>
 }
 
-@if (firstDayAdded) {
-    <div class="next-prev-buttons">
+@if (!isHomePage) {
+  @for (day of days; track day.date) {
+    <div class="day-card">
+      <h3>
+        {{day.date}} Schedule ({{ formatHourString(day.startTime) }} - {{ formatHourString(day.endTime) }})
+      </h3>
+
+      <div class="schedule">
+        @for (slot of day.slots; track slot.hourLabel) {
+          <div class="hour-row">
+            <div class="hour-label">
+              {{ slot.hourLabel }}
+            </div>
+
+            <div class="activities-column">
+              @for (act of slot.activities; track act.name) {
+                <div class="activity-summary">
+                  <strong>{{ act.name }}</strong><br />
+                  {{ formatHourString(act.start!) }} - {{ formatHourString(act.end!) }}<br />
+                  <b>Expected budget: </b>${{ act.budget }}
+                </div>
+              }
+            </div>
+
+            @if (slot.isEditing) {
+              <div class="activity-form">
+                <input
+                  type="text"
+                  placeholder="Activity"
+                  [(ngModel)]="slot.tempActivity.name"
+                />
+
+                <input
+                  type="time"
+                  [(ngModel)]="slot.tempActivity.start"
+                />
+
+                <input
+                  type="time"
+                  [(ngModel)]="slot.tempActivity.end"
+                />
+
+                <input
+                  type="number"
+                  placeholder="Expected budget"
+                  [(ngModel)]="slot.tempActivity.budget"
+                />
+
+                <button class="save-btn" (click)="saveActivity(slot)">
+                  Save
+                </button>
+              </div>
+            }
+
+            <!-- Adds more activities -->
+            <div class="add-activity-wrapper"> 
+              <button class="add-activity-btn" *ngIf="!slot.isEditing" (click)="slot.isEditing = true">
+                + Add Activity
+              </button> 
+            </div>
+            </div>
+          }
+      </div>
+    </div>
+  }
+
+  <div class="next-prev-buttons">
+        <button class="add-day-btn" [routerLink]="['/home']">Back to Home</button>
+
         <button class="add-day-btn" (click)="navigateToDay('prev')">+ Add Past Day</button>
         <button class="add-day-btn" (click)="navigateToDay('next')">+ Add Future Day</button>
         <button class="add-day-btn" (click)="navigateExistingDay('prev')">View Previous Day</button>

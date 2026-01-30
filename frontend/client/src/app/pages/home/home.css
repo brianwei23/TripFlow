@@ -104,6 +104,26 @@ h3 {
     display: flex;
     gap: 16px;
     overflow-x: auto;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin: 20px 0;
+}
+
+.day-tile {
+    min-width: 150px;
+    max-width: 200px;
+    padding: 12px;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+    background-color: #fafafa;
+    cursor: pointer;
+    text-align: center;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.day-title:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
 }
 
 .day-column {
