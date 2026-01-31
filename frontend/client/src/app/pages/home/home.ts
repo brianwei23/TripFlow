@@ -58,6 +58,8 @@ export class HomeComponent {
   showTimePicker = false;
   tempStartTime = '';
   tempEndTime = '';
+  // Date tiles sort
+  sortRecentFirst: boolean = false;
 
   currentDayIndex: number = -1;
 
@@ -156,6 +158,14 @@ export class HomeComponent {
       : [];
   }
 
+  toggleSortRecent() {
+    if (this.sortRecentFirst) {
+      this.days.sort((a, b) => b.date.localeCompare(a.date)); //Most recent first
+    } else {
+      this.days.sort((a, b) => a.date.localeCompare(b.date)); //Oldest first
+    }
+  }
+
   navigateExistingDay(direction: 'next' | 'prev') {
     if (direction === 'next' && this.currentDayIndex < this.days.length - 1) {
       this.currentDayIndex++;
@@ -246,6 +256,11 @@ export class HomeComponent {
       return;
     }
 
+    if (act.budget === undefined || act.budget === null || act.budget < 0) { 
+      alert('Please enter a valid budget.'); 
+      return; 
+    }
+
     const [slotStartStr, slotEndStr] = slot.hourLabel.split(' - ');
 
     const slotStart = this.parseHourLabelTo24(slotStartStr);
@@ -282,6 +297,13 @@ export class HomeComponent {
     }
     if (this.tempStartTime >= this.tempEndTime) {
       alert('Start time needs to be before the end time.');
+      return;
+    }
+
+    // Stop duplicate dates
+    const existingDay = this.days.find(d => d.date === this.selectedDate);
+    if (existingDay) {
+      alert('This date already exsits.');
       return;
     }
     
@@ -335,8 +357,6 @@ export class HomeComponent {
    console.log('Days loaded for homepage:', this.days.length);
    this.cdr.detectChanges();
   }
-
-
 
   goToDay(date: string) {
     const day = this.days.find(d => d.date === date);

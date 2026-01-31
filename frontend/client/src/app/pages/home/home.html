@@ -26,6 +26,13 @@
     </div>
   }
 
+  <div style="text-align:center; margin-bottom: 16px;">
+    <label>
+      <input type="checkbox" [(ngModel)]="sortRecentFirst" (change)="toggleSortRecent()"/>
+      Show recent days first
+    </label>
+  </div>
+
   <div class="days-container">
     @for (day of days; track day.date) {
       <div class="day-tile" (click)="goToDay(day.date)">
