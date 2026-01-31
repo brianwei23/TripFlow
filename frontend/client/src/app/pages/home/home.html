@@ -87,11 +87,19 @@
                 <div class="activity-summary">
                   @if (!act.isEditing) {
                     <strong>{{ act.name }}</strong><br />
+                    @if (act.location) {
+                      <div class="activity-location">
+                        <b>Location:</b> {{act.location}}
+                      </div>
+                    }
                     <div class="activity-time">
                       {{ formatHourString(act.start!) }} - {{ formatHourString(act.end!) }}<br />
                     </div>
-                    <div class="activity-budget">  
-                      <b>Expected budget: </b>${{ act.budget }}
+                    <div class="activity-cost">  
+                      <b>Expected cost: </b>${{ act.expectedCost }}
+                      @if (act.actualCost !== null && act.actualCost !== undefined) {
+                        <b>Actual cost: </b>${{act.actualCost}}
+                      }
                     </div>
 
                     <button class="edit-btn" (click)="editActivity(act)">
@@ -110,15 +118,19 @@
                       [(ngModel)]="act.temp!.name"
                       placeHolder="Activity name"
                     />
+
+                    <input type="text" [(ngModel)]="act.temp!.location" placeholder="Location"/>
                     
                     <input type="time" [(ngModel)]="act.temp!.start" />
                     <input type="time" [(ngModel)]="act.temp!.end" />
 
                     <input
                       type="number"
-                      [(ngModel)]="act.temp!.budget"
-                      placeholder="Expected budget"
+                      [(ngModel)]="act.temp!.expectedCost"
+                      placeholder="Expected cost"
                     />
+
+                    <input type="number" [(ngModel)]="act.temp!.actualCost" placeholder="Actual cost"/>
 
                     <button class="save-btn" (click)="saveEditedActivity(day, slot, act)">
                       Save
@@ -140,6 +152,8 @@
                   [(ngModel)]="slot.tempActivity.name"
                 />
 
+                <input type="text" placeholder="Location" [(ngModel)]="slot.tempActivity.location"/>
+
                 <input
                   type="time"
                   [(ngModel)]="slot.tempActivity.start"
@@ -152,9 +166,11 @@
 
                 <input
                   type="number"
-                  placeholder="Expected budget"
-                  [(ngModel)]="slot.tempActivity.budget"
+                  placeholder="Expected cost"
+                  [(ngModel)]="slot.tempActivity.expectedCost"
                 />
+
+                <input type="number" placeholder="Actual cost" [(ngModel)]="slot.tempActivity.actualCost"/>
 
                 <button class="save-btn" (click)="saveActivity(slot)">
                   Save

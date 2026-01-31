@@ -22,9 +22,12 @@ interface Activity {
   name: string;
   start?: string;
   end?: string;
-  budget?: number;
+  expectedCost?: number;
+  location?: string;
+  actualCost?: number | null;
   isEditing?: boolean;
   temp?: Activity;
+
 }
 
 interface DayPlan {
@@ -133,7 +136,9 @@ export class HomeComponent {
           name: act.name,
           start: act.start,
           end: act.end,
-          budget: act.budget
+          expectedCost: act.expectedCost,
+          location: act.location || '',
+          actualCost: act.actualCost !== undefined ? act.actualCost : null
         }))
       }))
     };
@@ -156,7 +161,7 @@ export class HomeComponent {
       slots: data.slots.map(slot => ({ 
         ...slot, 
         isEditing: false, 
-        tempActivity: {name: '', start: '', end: '', budget: undefined}, 
+        tempActivity: {name: '', start: '', end: '', expectedCost: undefined, actualCost: null}, 
         activities: slot.activities ?? []
       }))  
     };
@@ -250,7 +255,9 @@ export class HomeComponent {
       name: act.name,
       start: act.start,
       end: act.end,
-      budget: act.budget
+      expectedCost: act.expectedCost,
+      location: act.location,
+      actualCost: act.actualCost
     };
   }
 
@@ -261,12 +268,12 @@ export class HomeComponent {
   saveEditedActivity(day: DayPlan, slot: HourSlot, act: Activity) {
     const temp = act.temp;
     if (!temp) return;
-    if (!temp.name || !temp.start || !temp.end || temp.budget == undefined || temp.budget == null) {
-      alert('All fields must be filled.');
+    if (!temp.name || !temp.start || !temp.end || temp.expectedCost == undefined || temp.expectedCost == null) {
+      alert('Activity name, times, and expected cost must be filled.');
       return;
     }
-    if (temp.budget < 0) {
-      alert('Budget cannot be less than 0.')
+    if (temp.expectedCost < 0) {
+      alert('Cost cannot be less than 0.')
       return;
     }
     if (temp.start >= temp.end) {
@@ -286,7 +293,9 @@ export class HomeComponent {
     act.name = temp.name;
     act.start = temp.start;
     act.end = temp.end;
-    act.budget = temp.budget;
+    act.expectedCost = temp.expectedCost;
+    act.location = temp.location;
+    act.actualCost = temp.actualCost;
     act.isEditing = false;
     act.temp = undefined;
 
@@ -330,7 +339,7 @@ export class HomeComponent {
         hourLabel: label,
         isEditing: false,
         activities: [],
-        tempActivity: {name: '', start: '', end: '', budget: 0}
+        tempActivity: {name: '', start: '', end: '', expectedCost: 0}
       });
       currentHour = nextHour;
       currentMin = nextMin;
@@ -375,8 +384,8 @@ export class HomeComponent {
       return;
     }
 
-    if (act.budget === undefined || act.budget === null || act.budget < 0) { 
-      alert('Please enter a valid budget.'); 
+    if (act.expectedCost === undefined || act.expectedCost === null || act.expectedCost < 0) { 
+      alert('Please enter a valid expected cost.'); 
       return; 
     }
 
@@ -401,7 +410,7 @@ export class HomeComponent {
 
     this.saveDayToFirebase(this.days[0]);
 
-    slot.tempActivity = { name: '', start: '', end: '', budget: undefined };
+    slot.tempActivity = { name: '', start: '', end: '', expectedCost: undefined, actualCost: null };
     slot.isEditing = false;
   }
 
@@ -465,7 +474,7 @@ export class HomeComponent {
           hourLabel: slot.hourLabel,
           activities: slot.activities ?? [],
           isEditing: false,
-          tempActivity: { name: '', start: '', end: '', budget: undefined }
+          tempActivity: { name: '', start: '', end: '', expectedCost: undefined, actualCost: null }
         }))
       } as DayPlan;
     })
