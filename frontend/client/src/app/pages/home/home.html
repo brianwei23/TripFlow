@@ -51,6 +51,12 @@
     <div class="day-card">
       <h3>
         {{day.date}} Schedule ({{ formatHourString(day.startTime) }} - {{ formatHourString(day.endTime) }})
+
+        <button
+          class="delete-day-btn"
+          (click)="deleteDay(day)">
+          Delete Day
+        </button>
       </h3>
 
       <div class="schedule">
@@ -64,8 +70,17 @@
               @for (act of slot.activities; track act.name) {
                 <div class="activity-summary">
                   <strong>{{ act.name }}</strong><br />
-                  {{ formatHourString(act.start!) }} - {{ formatHourString(act.end!) }}<br />
-                  <b>Expected budget: </b>${{ act.budget }}
+                  <div class="activity-time">
+                    {{ formatHourString(act.start!) }} - {{ formatHourString(act.end!) }}<br />
+                  </div>
+                  <div class="activity-budget">  
+                    <b>Expected budget: </b>${{ act.budget }}
+                  </div>
+                  <button
+                    class="delete-btn"
+                    (click)="deleteActivity(day, slot, act)">
+                    Delete
+                  </button>
                 </div>
               }
             </div>

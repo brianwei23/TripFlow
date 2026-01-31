@@ -51,6 +51,9 @@ h3 {
     border-radius: 6px;
     text-align: center;
     width: fit-content;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
 }
 
 .activities-column {
@@ -79,6 +82,25 @@ h3 {
     display: flex;
     justify-content: flex-start;
     margin-top: 12px;
+}
+
+.delete-btn {
+    background-color: red;
+    border: none;
+    color: black;
+    cursor: pointer;
+    font-size: 14px;
+    margin-left: 8px;
+}
+
+.delete-day-btn {
+    margin-left: 12px;
+    background-color: red;
+    color: white;
+    border: none;
+    padding: 4px 8px;
+    border-radius: 4px;
+    cursor: pointer;
 }
 
 .logout-btn {

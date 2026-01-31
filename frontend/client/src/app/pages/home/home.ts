@@ -4,7 +4,7 @@ import { AuthService } from '../../services/auth.service';
 import { Router, ActivatedRoute, RouterModule } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { Firestore } from '@angular/fire/firestore';
-import { collection, doc, getDoc, getDocs, setDoc } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, setDoc, deleteDoc } from 'firebase/firestore';
 
 interface HourSlot {
   hourLabel: string;
@@ -369,5 +369,30 @@ export class HomeComponent {
     this.auth.logout().then(() => {
       this.router.navigate(['/login']);
     }).catch(err => alert(err.message));
+  }
+
+  deleteActivity(day: DayPlan, slot: HourSlot, act: Activity) {
+    const confirmDelete = confirm(`Delete activity "${act.name}"?`);
+    if (!confirmDelete) return;
+
+    slot.activities = slot.activities.filter(a => a !== act);
+
+    this.saveDayToFirebase(day);
+    this.cdr.detectChanges();
+  }
+
+  async deleteDay(day: DayPlan) {
+    const confirmDelete = confirm(
+      `Delete the entire day (${day.date})? This cannot be undone.`
+    );
+
+    if (!confirmDelete) return;
+
+    const uid = this.auth.uid;
+    const docRef = doc(this.firestore, 'users', uid, 'days', day.date);
+    await deleteDoc(docRef);
+
+    this.days = this.days.filter(d => d.date !== day.date);
+    this.router.navigate(['/home']);
   }
 }
