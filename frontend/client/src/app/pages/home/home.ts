@@ -23,6 +23,8 @@ interface Activity {
   start?: string;
   end?: string;
   budget?: number;
+  isEditing?: boolean;
+  temp?: Activity;
 }
 
 interface DayPlan {
@@ -30,6 +32,9 @@ interface DayPlan {
   startTime: string;
   endTime: string;
   slots: HourSlot[];
+  isEditingTime?: boolean;
+  tempStartTime?: string;
+  tempEndTime?: string;
 }
 
 interface PersistedDayPlan {
@@ -124,7 +129,12 @@ export class HomeComponent {
       endTime: day.endTime,
       slots: day.slots.map(slot => ({
         hourLabel: slot.hourLabel,
-        activities: slot.activities
+        activities: slot.activities.map(act => ({
+          name: act.name,
+          start: act.start,
+          end: act.end,
+          budget: act.budget
+        }))
       }))
     };
     const docRef = doc(this.firestore, 'users', uid, 'days', day.date);
@@ -172,6 +182,115 @@ export class HomeComponent {
     } else if (direction === 'prev' && this.currentDayIndex > 0) {
       this.currentDayIndex--;
     }
+  }
+
+  startEditTime(day: DayPlan) {
+    day.isEditingTime = true;
+    day.tempStartTime = day.startTime;
+    day.tempEndTime = day.endTime;
+  }
+
+  cancelEditTime(day: DayPlan) {
+    day.isEditingTime = false;
+  }
+
+  async saveTimeRange(day: DayPlan) {
+    if (!day.tempStartTime || !day.tempEndTime) {
+      alert('Both times are required.');
+      return;
+    }
+
+    if (day.tempStartTime >= day.tempEndTime) {
+      alert('Start time must be before end time.');
+      return;
+    }
+
+    const userConfirmed = confirm(
+      'EDITING THE TIME RANGE CAN DELETE ALL YOUR ACTIVITIES.'
+    );
+
+    if (!userConfirmed) {
+      return;
+    }
+
+    const newSlots = this.generateHourSlots(
+      day.tempStartTime,
+      day.tempEndTime
+    );
+
+    // Preserve actvities that still fit
+    for (const oldSlot of day.slots) {
+      for (const act of oldSlot.activities) {
+        if(!act.start || !act.end) continue;
+
+        const fits = newSlots.find(s => {
+          const [sStart, sEnd] = s.hourLabel.split(' - ');
+          const start24 = this.parseHourLabelTo24(sStart);
+          const end24 = this.parseHourLabelTo24(sEnd);
+          return act.start! >= start24 && act.end! <= end24;
+        });
+        if (fits) {
+          fits.activities.push(act);
+        }
+      }
+    }
+
+    day.startTime = day.tempStartTime;
+    day.endTime = day.tempEndTime;
+    day.slots = newSlots;
+    day.isEditingTime = false;
+
+    await this.saveDayToFirebase(day);
+    this.cdr.detectChanges();
+  }
+
+  editActivity(act: Activity) {
+    act.isEditing = true;
+    act.temp = {
+      name: act.name,
+      start: act.start,
+      end: act.end,
+      budget: act.budget
+    };
+  }
+
+  cancelEditActivity(act: Activity) {
+    act.isEditing = false;
+  }
+
+  saveEditedActivity(day: DayPlan, slot: HourSlot, act: Activity) {
+    const temp = act.temp;
+    if (!temp) return;
+    if (!temp.name || !temp.start || !temp.end || temp.budget == undefined || temp.budget == null) {
+      alert('All fields must be filled.');
+      return;
+    }
+    if (temp.budget < 0) {
+      alert('Budget cannot be less than 0.')
+      return;
+    }
+    if (temp.start >= temp.end) {
+      alert('Start time must be before end time');
+      return;
+    }  
+
+    const [slotStartStr, slotEndStr] = slot.hourLabel.split(' - ');
+    const slotStart = this.parseHourLabelTo24(slotStartStr);
+    const slotEnd = this.parseHourLabelTo24(slotEndStr);
+
+    if (temp.start < slotStart || temp.start > slotEnd) {
+      alert(`Activity start time must be with the hour slot.`);
+      return;
+    }
+
+    act.name = temp.name;
+    act.start = temp.start;
+    act.end = temp.end;
+    act.budget = temp.budget;
+    act.isEditing = false;
+    act.temp = undefined;
+
+    this.saveDayToFirebase(day);
   }
 
   // Time format

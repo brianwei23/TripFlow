@@ -203,3 +203,17 @@ h3 {
     cursor: pointer;
     transition: background-color 0.2s ease, transform 0.1s ease;
 }
+
+.time-edit-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.edit-time-btn {
+    background-color: green;
+    cursor: pointer;
+    padding: 0;
+    border-radius: 10%;
+}

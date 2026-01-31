@@ -1,4 +1,4 @@
-<h1>Travel Planner</h1>
+<h1>Your Calendar</h1>
 
 <button class="logout-btn" (click)="logout()">Logout</button>
 
@@ -49,15 +49,31 @@
 @if (!isHomePage) {
   @for (day of days; track day.date) {
     <div class="day-card">
-      <h3>
-        {{day.date}} Schedule ({{ formatHourString(day.startTime) }} - {{ formatHourString(day.endTime) }})
+      <h3>{{day.date}} Schedule</h3>
+      @if (!day.isEditingTime) {
+        <p>
+          <b>{{formatHourString(day.startTime)}} - {{formatHourString(day.endTime)}}</b>
+        </p>
+        <button class="edit-time-btn" (click)="startEditTime(day)">
+          Edit time range
+        </button>
+      }
+
+      @if (day.isEditingTime) {
+        <div class="time-edit-row">
+          <input type="time" [(ngModel)]="day.tempStartTime">
+          <input type="time" [(ngModel)]="day.tempEndTime">
+
+          <button class="save-btn" (click)="saveTimeRange(day)">Save</button>
+          <button class="cancel-btn" (click)="cancelEditTime(day)">Cancel</button>
+        </div>
+      }
 
         <button
           class="delete-day-btn"
           (click)="deleteDay(day)">
           Delete Day
         </button>
-      </h3>
 
       <div class="schedule">
         @for (slot of day.slots; track slot.hourLabel) {
@@ -69,18 +85,49 @@
             <div class="activities-column">
               @for (act of slot.activities; track act.name) {
                 <div class="activity-summary">
-                  <strong>{{ act.name }}</strong><br />
-                  <div class="activity-time">
-                    {{ formatHourString(act.start!) }} - {{ formatHourString(act.end!) }}<br />
-                  </div>
-                  <div class="activity-budget">  
-                    <b>Expected budget: </b>${{ act.budget }}
-                  </div>
-                  <button
-                    class="delete-btn"
-                    (click)="deleteActivity(day, slot, act)">
-                    Delete
-                  </button>
+                  @if (!act.isEditing) {
+                    <strong>{{ act.name }}</strong><br />
+                    <div class="activity-time">
+                      {{ formatHourString(act.start!) }} - {{ formatHourString(act.end!) }}<br />
+                    </div>
+                    <div class="activity-budget">  
+                      <b>Expected budget: </b>${{ act.budget }}
+                    </div>
+
+                    <button class="edit-btn" (click)="editActivity(act)">
+                      Edit
+                    </button>
+
+                    <button
+                      class="delete-btn"
+                      (click)="deleteActivity(day, slot, act)">
+                      Delete
+                    </button>
+                  }
+                  @if (act.isEditing) {
+                    <input
+                      type="text"
+                      [(ngModel)]="act.temp!.name"
+                      placeHolder="Activity name"
+                    />
+                    
+                    <input type="time" [(ngModel)]="act.temp!.start" />
+                    <input type="time" [(ngModel)]="act.temp!.end" />
+
+                    <input
+                      type="number"
+                      [(ngModel)]="act.temp!.budget"
+                      placeholder="Expected budget"
+                    />
+
+                    <button class="save-btn" (click)="saveEditedActivity(day, slot, act)">
+                      Save
+                    </button>
+
+                    <button class="cancel-btn" (click)="cancelEditActivity(act)">
+                      Cancel
+                    </button>
+                  } 
                 </div>
               }
             </div>
