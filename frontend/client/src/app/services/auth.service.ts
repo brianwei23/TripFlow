@@ -5,7 +5,8 @@ import {
     signInWithEmailAndPassword,
     signOut,
     UserCredential,
-    sendEmailVerification
+    sendEmailVerification,
+    User
 } from 'firebase/auth';
 
 // Globally available service
@@ -13,6 +14,17 @@ import {
 export class AuthService {
 
     constructor(private auth: Auth) {}
+
+    get currentUser() {
+        return this.auth.currentUser;
+    }
+
+    get uid(): string {
+        if (!this.auth.currentUser) {
+            throw new Error('User not authenticated');
+        }
+        return this.auth.currentUser.uid;
+    }
 
     // Create user
     async register(email: string, password: string): Promise<UserCredential> {

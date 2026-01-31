@@ -13,6 +13,11 @@ interface HourSlot {
   isEditing: boolean;
 }
 
+interface PersistedHourSlot {
+  hourLabel: string;
+  activities: Activity[];
+}
+
 interface Activity {
   name: string;
   start?: string;
@@ -25,6 +30,13 @@ interface DayPlan {
   startTime: string;
   endTime: string;
   slots: HourSlot[];
+}
+
+interface PersistedDayPlan {
+  date: string;
+  startTime: string;
+  endTime: string;
+  slots: PersistedHourSlot[];
 }
 
 @Component({
@@ -102,14 +114,40 @@ export class HomeComponent {
   }
 
   async saveDayToFirebase(day: DayPlan) {
-    const docRef = doc(this.firestore, 'days', day.date);
-    await setDoc(docRef, day);
+    const uid = this.auth.uid;
+
+    const sanitizedDay: PersistedDayPlan = {
+      date: day.date,
+      startTime: day.startTime,
+      endTime: day.endTime,
+      slots: day.slots.map(slot => ({
+        hourLabel: slot.hourLabel,
+        activities: slot.activities
+      }))
+    };
+    const docRef = doc(this.firestore, 'users', uid, 'days', day.date);
+    await setDoc(docRef, sanitizedDay);
   }
 
   async loadDayFromFirebase(date: string): Promise<DayPlan | null> {
-    const docRef = doc(this.firestore, 'days', date);
+    const uid = this.auth.uid;
+    const docRef = doc(this.firestore, 'users', uid, 'days', date);
     const docSnap = await getDoc(docRef);
-    return docSnap.exists() ? (docSnap.data() as DayPlan) : null;
+
+    if (!docSnap.exists()) return null;
+
+    const data = docSnap.data() as PersistedDayPlan;
+    return { 
+      date: data.date, 
+      startTime: data.startTime, 
+      endTime: data.endTime, 
+      slots: data.slots.map(slot => ({ 
+        ...slot, 
+        isEditing: false, 
+        tempActivity: {name: '', start: '', end: '', budget: undefined}, 
+        activities: slot.activities ?? []
+      }))  
+    };
   }
 
   showCurrentDay() {
@@ -271,15 +309,34 @@ export class HomeComponent {
   }
 
   async loadAllDays() {
-    const daysCol = collection(this.firestore, 'days');
-    const snapshot = await getDocs(daysCol);
-    this.days = snapshot.docs
-      .map(doc => doc.data() as DayPlan)
-      .sort((a, b) => a.date.localeCompare(b.date));
-    this.firstDayAdded = this.days.length > 0;
-    console.log('Days loaded for homepage:', this.days.length)
-    this.cdr.detectChanges();
+   const uid = this.auth.uid;
+   const daysCol = collection(this.firestore, 'users', uid, 'days');
+   const snapshot = await getDocs(daysCol);
+
+   this.days = snapshot.docs
+    .map(doc => {
+      const data = doc.data() as PersistedDayPlan;
+      return {
+        date: data.date,
+        startTime: data.startTime,
+        endTime: data.endTime,
+        slots: data.slots.map(slot => ({
+          hourLabel: slot.hourLabel,
+          activities: slot.activities ?? [],
+          isEditing: false,
+          tempActivity: { name: '', start: '', end: '', budget: undefined }
+        }))
+      } as DayPlan;
+    })
+    .sort((a, b) => a.date.localeCompare(b.date));
+
+   this.firstDayAdded = this.days.length > 0;
+
+   console.log('Days loaded for homepage:', this.days.length);
+   this.cdr.detectChanges();
   }
+
+
 
   goToDay(date: string) {
     const day = this.days.find(d => d.date === date);
