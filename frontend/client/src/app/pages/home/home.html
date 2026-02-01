@@ -120,6 +120,8 @@
                     />
 
                     <input type="text" [(ngModel)]="act.temp!.location" placeholder="Location"/>
+
+                    <button type="button" class="map-btn" (click)="openMapForActivity(act)">Pick Location (Map)</button>
                     
                     <input type="time" [(ngModel)]="act.temp!.start" />
                     <input type="time" [(ngModel)]="act.temp!.end" />

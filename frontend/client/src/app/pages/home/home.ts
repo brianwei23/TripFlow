@@ -76,7 +76,6 @@ export class HomeComponent {
 
   private route = inject(ActivatedRoute);
 
-
   isHomePage: boolean = false;
 
   ngOnInit() {
@@ -88,7 +87,9 @@ export class HomeComponent {
 
         this.selectedDate = dateParam;
 
-        const navState = history.state as {preloadedDay: DayPlan};
+        const navState = history.state as {
+          preloadedDay?: DayPlan; pickedLocation?: string; editingActivity?: Activity;
+        };
 
         if (navState && navState.preloadedDay && navState.preloadedDay.date === dateParam) {
           console.log('Loading day from Route State (Immediate)');
@@ -113,13 +114,45 @@ export class HomeComponent {
           this.firstDayAdded = false;
           this.showTimePicker = true;
         }
+
+        if (navState.editingActivity) {
+          const editingAct = this.days
+            .flatMap(d => d.slots)
+            .flatMap(s => s.activities)
+            .find(a => a.name === navState.editingActivity?.name);
+          if (editingAct) {
+            editingAct.temp = navState.editingActivity;
+
+            // Apply picked location
+            if (navState.pickedLocation) {
+              editingAct.temp.location = navState.pickedLocation;
+            }
+            const slot = this.days[0].slots.find(s => 
+              s.activities.some(a => a.name === editingAct.name)
+            );
+            if (slot) {
+              this.saveEditedActivity(this.days[0], slot, editingAct);
+              this.cdr.detectChanges();
+            }
+          }
+        }
+        // Apply picked location 
+        else if(navState.pickedLocation) {
+          const editingAct = this.days
+            .flatMap(d => d.slots)
+            .flatMap(s => s.activities)
+            .find(a => a.isEditing);
+          if (editingAct && editingAct.temp) {
+            editingAct.temp.location = navState.pickedLocation;
+          }
+        }
       } else {
         this.isHomePage = true;
         this.days = [];
         await this.loadAllDays();
         this.showTimePicker = false;
       }
-      this.cdr.detectChanges(); // Forc UI refresh after any route change/data load
+      this.cdr.detectChanges(); // Force UI refresh after any route change/data load
       });
   }
 
@@ -490,6 +523,13 @@ export class HomeComponent {
     const day = this.days.find(d => d.date === date);
     this.router.navigate(['/day', date], {
       state: {preloadedDay: day}
+    });
+  }
+
+  openMapForActivity(act: Activity) {
+    if (!act.temp) act.temp = {...act};
+    this.router.navigate(['/map-picker'], {
+      state: { date: this.selectedDate, editingActivity: act.temp }
     });
   }
 
