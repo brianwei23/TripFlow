@@ -155,6 +155,7 @@
                 />
 
                 <input type="text" placeholder="Location" [(ngModel)]="slot.tempActivity.location"/>
+                <button type="button" class="map-btn" (click)="openMapForNewActivity(slot)">Pick Location (Map)</button>
 
                 <input
                   type="time"
@@ -174,7 +175,7 @@
 
                 <input type="number" placeholder="Actual cost" [(ngModel)]="slot.tempActivity.actualCost"/>
 
-                <button class="save-btn" (click)="saveActivity(slot)">
+                <button class="save-btn" (click)="saveActivity(day, slot)">
                   Save
                 </button>
               </div>
@@ -182,7 +183,7 @@
 
             <!-- Adds more activities -->
             <div class="add-activity-wrapper"> 
-              <button class="add-activity-btn" *ngIf="!slot.isEditing" (click)="slot.isEditing = true">
+              <button class="add-activity-btn" *ngIf="!slot.isEditing" (click)="toggleAddForm(slot)">
                 + Add Activity
               </button> 
             </div>

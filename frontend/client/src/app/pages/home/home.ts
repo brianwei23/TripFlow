@@ -6,6 +6,7 @@ import { CommonModule } from '@angular/common';
 import { Firestore } from '@angular/fire/firestore';
 import { collection, doc, getDoc, getDocs, setDoc, deleteDoc } from 'firebase/firestore';
 
+
 interface HourSlot {
   hourLabel: string;
   activities: Activity[];
@@ -13,10 +14,12 @@ interface HourSlot {
   isEditing: boolean;
 }
 
+
 interface PersistedHourSlot {
   hourLabel: string;
   activities: Activity[];
 }
+
 
 interface Activity {
   name: string;
@@ -28,7 +31,9 @@ interface Activity {
   isEditing?: boolean;
   temp?: Activity;
 
+
 }
+
 
 interface DayPlan {
   date: string;
@@ -40,12 +45,14 @@ interface DayPlan {
   tempEndTime?: string;
 }
 
+
 interface PersistedDayPlan {
   date: string;
   startTime: string;
   endTime: string;
   slots: PersistedHourSlot[];
 }
+
 
 @Component({
   selector: 'app-home',
@@ -58,10 +65,13 @@ export class HomeComponent {
   days: DayPlan[] = [];
   private cdr = inject(ChangeDetectorRef);
 
+
   private auth = inject(AuthService);
   private router = inject(Router);
 
+
   private firestore = inject(Firestore);
+
 
   showTimePicker = false;
   tempStartTime = '';
@@ -69,95 +79,97 @@ export class HomeComponent {
   // Date tiles sort
   sortRecentFirst: boolean = false;
 
+
   currentDayIndex: number = -1;
+
 
   selectedDate: string = '';
   firstDayAdded: boolean = false;
 
+
   private route = inject(ActivatedRoute);
 
+
   isHomePage: boolean = false;
+
 
   ngOnInit() {
     this.route.params.subscribe(async params => {
       const dateParam = params['date'];
-      
+     
       if (dateParam) {
         this.isHomePage = false;
 
         this.selectedDate = dateParam;
 
-        const navState = history.state as {
-          preloadedDay?: DayPlan; pickedLocation?: string; editingActivity?: Activity;
-        };
+        let navState = history.state as any;
 
         if (navState && navState.preloadedDay && navState.preloadedDay.date === dateParam) {
-          console.log('Loading day from Route State (Immediate)');
           this.days = [navState.preloadedDay];
           this.currentDayIndex = 0;
           this.firstDayAdded = true;
           this.showTimePicker = false;
-          this.cdr.detectChanges(); // Refresh UI
-          return;
-        }
-
-        console.log('Loading day from Firebase');
-
-        const dayFromDb = await this.loadDayFromFirebase(dateParam);
-        if (dayFromDb) {
-          this.days = [dayFromDb];
-          this.currentDayIndex = 0;
-          this.firstDayAdded = true;
-          this.showTimePicker = false;
         } else {
-          this.days = [];
-          this.firstDayAdded = false;
-          this.showTimePicker = true;
+          const dayFromDb = await this.loadDayFromFirebase(dateParam);
+          if (dayFromDb) {
+            this.days = [dayFromDb];
+            this.currentDayIndex = 0;
+            this.firstDayAdded = true;
+            this.showTimePicker = false;
+          } else {
+            this.days = [];
+            this.firstDayAdded = false;
+            this.showTimePicker = true;
         }
+      }
 
-        if (navState.editingActivity) {
+
+        if (navState?.editingActivity) {
           const editingAct = this.days
             .flatMap(d => d.slots)
             .flatMap(s => s.activities)
             .find(a => a.name === navState.editingActivity?.name);
           if (editingAct) {
-            editingAct.temp = navState.editingActivity;
+            editingAct.isEditing = true;
+
+            editingAct.temp = {
+              ...editingAct.temp,
+              ...navState.editingActivity
+            };
 
             // Apply picked location
-            if (navState.pickedLocation) {
-              editingAct.temp.location = navState.pickedLocation;
-            }
-            const slot = this.days[0].slots.find(s => 
-              s.activities.some(a => a.name === editingAct.name)
-            );
-            if (slot) {
-              this.saveEditedActivity(this.days[0], slot, editingAct);
-              this.cdr.detectChanges();
-            }
+            if (navState.pickedLocation) editingAct.temp!.location = navState.pickedLocation;
           }
         }
-        // Apply picked location 
-        else if(navState.pickedLocation) {
-          const editingAct = this.days
-            .flatMap(d => d.slots)
-            .flatMap(s => s.activities)
-            .find(a => a.isEditing);
-          if (editingAct && editingAct.temp) {
-            editingAct.temp.location = navState.pickedLocation;
+        if (navState?.isNewActivity && navState.slotHourLabel && this.days.length) {
+          const slot = this.days[0].slots.find(
+            s => s.hourLabel === navState.slotHourLabel
+          );
+          if (slot) {
+            if (navState.tempActivity) slot.tempActivity = { ...navState.tempActivity };
+            if (navState.pickedLocation) slot.tempActivity.location = navState.pickedLocation;
+            slot.isEditing = true;
           }
         }
+        const currentNav = this.router.currentNavigation();
+        if (currentNav && currentNav.extras) {
+          currentNav.extras.state = undefined;
+        }
+        window.history.replaceState({}, '');
       } else {
         this.isHomePage = true;
         this.days = [];
         await this.loadAllDays();
         this.showTimePicker = false;
-      }
+      }  
       this.cdr.detectChanges(); // Force UI refresh after any route change/data load
       });
   }
 
+
   async saveDayToFirebase(day: DayPlan) {
     const uid = this.auth.uid;
+
 
     const sanitizedDay: PersistedDayPlan = {
       date: day.date,
@@ -179,32 +191,37 @@ export class HomeComponent {
     await setDoc(docRef, sanitizedDay);
   }
 
+
   async loadDayFromFirebase(date: string): Promise<DayPlan | null> {
     const uid = this.auth.uid;
     const docRef = doc(this.firestore, 'users', uid, 'days', date);
     const docSnap = await getDoc(docRef);
 
+
     if (!docSnap.exists()) return null;
 
+
     const data = docSnap.data() as PersistedDayPlan;
-    return { 
-      date: data.date, 
-      startTime: data.startTime, 
-      endTime: data.endTime, 
-      slots: data.slots.map(slot => ({ 
-        ...slot, 
-        isEditing: false, 
-        tempActivity: {name: '', start: '', end: '', expectedCost: undefined, actualCost: null}, 
+    return {
+      date: data.date,
+      startTime: data.startTime,
+      endTime: data.endTime,
+      slots: data.slots.map(slot => ({
+        ...slot,
+        isEditing: false,
+        tempActivity: {name: '', start: '', end: '', expectedCost: undefined, actualCost: null},
         activities: slot.activities ?? []
       }))  
     };
   }
+
 
   showCurrentDay() {
     return this.currentDayIndex >= 0 && this.currentDayIndex < this.days.length
       ? [this.days[this.currentDayIndex]]
       : [];
   }
+
 
   toggleSortRecent() {
     if (this.sortRecentFirst) {
@@ -214,6 +231,7 @@ export class HomeComponent {
     }
   }
 
+
   navigateExistingDay(direction: 'next' | 'prev') {
     if (direction === 'next' && this.currentDayIndex < this.days.length - 1) {
       this.currentDayIndex++;
@@ -222,15 +240,18 @@ export class HomeComponent {
     }
   }
 
+
   startEditTime(day: DayPlan) {
     day.isEditingTime = true;
     day.tempStartTime = day.startTime;
     day.tempEndTime = day.endTime;
   }
 
+
   cancelEditTime(day: DayPlan) {
     day.isEditingTime = false;
   }
+
 
   async saveTimeRange(day: DayPlan) {
     if (!day.tempStartTime || !day.tempEndTime) {
@@ -238,28 +259,34 @@ export class HomeComponent {
       return;
     }
 
+
     if (day.tempStartTime >= day.tempEndTime) {
       alert('Start time must be before end time.');
       return;
     }
 
+
     const userConfirmed = confirm(
       'EDITING THE TIME RANGE CAN DELETE ALL YOUR ACTIVITIES.'
     );
 
+
     if (!userConfirmed) {
       return;
     }
+
 
     const newSlots = this.generateHourSlots(
       day.tempStartTime,
       day.tempEndTime
     );
 
+
     // Preserve actvities that still fit
     for (const oldSlot of day.slots) {
       for (const act of oldSlot.activities) {
         if(!act.start || !act.end) continue;
+
 
         const fits = newSlots.find(s => {
           const [sStart, sEnd] = s.hourLabel.split(' - ');
@@ -273,14 +300,17 @@ export class HomeComponent {
       }
     }
 
+
     day.startTime = day.tempStartTime;
     day.endTime = day.tempEndTime;
     day.slots = newSlots;
     day.isEditingTime = false;
 
+
     await this.saveDayToFirebase(day);
     this.cdr.detectChanges();
   }
+
 
   editActivity(act: Activity) {
     act.isEditing = true;
@@ -294,9 +324,11 @@ export class HomeComponent {
     };
   }
 
+
   cancelEditActivity(act: Activity) {
     act.isEditing = false;
   }
+
 
   saveEditedActivity(day: DayPlan, slot: HourSlot, act: Activity) {
     const temp = act.temp;
@@ -314,14 +346,17 @@ export class HomeComponent {
       return;
     }  
 
+
     const [slotStartStr, slotEndStr] = slot.hourLabel.split(' - ');
     const slotStart = this.parseHourLabelTo24(slotStartStr);
     const slotEnd = this.parseHourLabelTo24(slotEndStr);
+
 
     if (temp.start < slotStart || temp.start > slotEnd) {
       alert(`Activity start time must be with the hour slot.`);
       return;
     }
+
 
     act.name = temp.name;
     act.start = temp.start;
@@ -332,8 +367,11 @@ export class HomeComponent {
     act.isEditing = false;
     act.temp = undefined;
 
+
     this.saveDayToFirebase(day);
+    this.cdr.detectChanges();
   }
+
 
   // Time format
   public formatHourString(time24: string): string {
@@ -345,6 +383,7 @@ export class HomeComponent {
     return `${hour}:${minute} ${period}`;
   }
 
+
   private parseHourLabelTo24(label: string): string {
     const [time, period] = label.split(' ');
     let [hour, minute] = time.split(':').map(Number);
@@ -353,16 +392,18 @@ export class HomeComponent {
     return `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2,'0')}`;
   }
 
+
   private generateHourSlots(start: string, end: string): HourSlot[] {
     const slots: HourSlot[] = [];
     let[currentHour, currentMin] = start.split(':').map(Number);
     const [endHour, endMin] = end.split(':').map(Number);
 
+
     while (currentHour < endHour || (currentHour === endHour && currentMin < endMin)) {
       // Calculate next hour mark
       let nextHour = currentHour + 1;
       let nextMin = currentMin;
-      
+     
       if (nextHour > endHour || (nextHour === endHour && nextMin > endMin)) {
         nextHour = endHour;
         nextMin = endMin;
@@ -380,6 +421,7 @@ export class HomeComponent {
     return slots;
   }
 
+
   addDay() {
     // Display time picker after date is selected
     if (!this.selectedDate) {
@@ -388,6 +430,7 @@ export class HomeComponent {
     }
     this.showTimePicker = true;
   }
+
 
   addNewDay(direction: 'next'| 'prev') {
     if (direction === 'next') {
@@ -402,24 +445,28 @@ export class HomeComponent {
     this.showTimePicker = true;
   }
 
-  saveActivity(slot: HourSlot) {
+
+  saveActivity(day: DayPlan, slot: HourSlot) {
     const act = slot.tempActivity;
 
     if (!act || !act.name) return;
+
 
     if (!act.start || !act.end) {
       alert('Please enter both start and end times.');
       return;
     }
 
+
     if (act.start >= act.end) {
       alert('Activity start time must be before end time.');
       return;
     }
 
-    if (act.expectedCost === undefined || act.expectedCost === null || act.expectedCost < 0) { 
-      alert('Please enter a valid expected cost.'); 
-      return; 
+
+    if (act.expectedCost === undefined || act.expectedCost === null || act.expectedCost < 0) {
+      alert('Please enter a valid expected cost.');
+      return;
     }
 
     const [slotStartStr, slotEndStr] = slot.hourLabel.split(' - ');
@@ -432,7 +479,9 @@ export class HomeComponent {
       return;
     }
 
+
     slot.activities.push({...act});
+
 
     // Sort the activities by start time
     slot.activities.sort((a, b) => {
@@ -441,11 +490,14 @@ export class HomeComponent {
       return a.start.localeCompare(b.start);
     });
 
-    this.saveDayToFirebase(this.days[0]);
-
     slot.tempActivity = { name: '', start: '', end: '', expectedCost: undefined, actualCost: null };
     slot.isEditing = false;
+    window.history.replaceState({}, '');
+    this.saveDayToFirebase(day);
+    // Force Angular to see changes
+    this.cdr.detectChanges();
   }
+
 
   async confirmTimeRange() {
     if(!this.selectedDate) {
@@ -461,13 +513,14 @@ export class HomeComponent {
       return;
     }
 
+
     // Stop duplicate dates
     const existingDay = this.days.find(d => d.date === this.selectedDate);
     if (existingDay) {
       alert('This date already exsits.');
       return;
     }
-    
+   
     const newDay: DayPlan = {
       date: this.selectedDate,
       startTime: this.tempStartTime,
@@ -475,26 +528,32 @@ export class HomeComponent {
       slots: this.generateHourSlots(this.tempStartTime, this.tempEndTime)
     };
 
+
     await this.saveDayToFirebase(newDay);
+
 
     this.router.navigate(['/day', this.selectedDate], {
       state: {preloadedDay: newDay}
     });
   }
 
+
   navigateToDay(direction: 'next' | 'prev') {
     const current = new Date(this.selectedDate);
     if (direction === 'next') current.setDate(current.getDate() + 1);
     else current.setDate(current.getDate() - 1);
 
+
     const newDate = current.toISOString().split('T')[0];
     this.router.navigate(['/day', newDate]);
   }
+
 
   async loadAllDays() {
    const uid = this.auth.uid;
    const daysCol = collection(this.firestore, 'users', uid, 'days');
    const snapshot = await getDocs(daysCol);
+
 
    this.days = snapshot.docs
     .map(doc => {
@@ -513,11 +572,14 @@ export class HomeComponent {
     })
     .sort((a, b) => a.date.localeCompare(b.date));
 
+
    this.firstDayAdded = this.days.length > 0;
+
 
    console.log('Days loaded for homepage:', this.days.length);
    this.cdr.detectChanges();
   }
+
 
   goToDay(date: string) {
     const day = this.days.find(d => d.date === date);
@@ -526,6 +588,7 @@ export class HomeComponent {
     });
   }
 
+
   openMapForActivity(act: Activity) {
     if (!act.temp) act.temp = {...act};
     this.router.navigate(['/map-picker'], {
@@ -533,18 +596,36 @@ export class HomeComponent {
     });
   }
 
+  openMapForNewActivity(slot: HourSlot) {
+    this.router.navigate(['/map-picker'], {
+      state: {
+        date: this.selectedDate,
+        isNewActivity: true,
+        slotHourLabel: slot.hourLabel,
+        tempActivity: slot.tempActivity
+      }
+    });
+  }
+
+  toggleAddForm(slot: HourSlot) {
+    slot.isEditing = true;
+    this.cdr.detectChanges();
+  }
+
+
   logout() {
     this.auth.logout().then(() => {
       this.router.navigate(['/login']);
     }).catch(err => alert(err.message));
   }
 
+
   deleteActivity(day: DayPlan, slot: HourSlot, act: Activity) {
     const confirmDelete = confirm(`Delete activity "${act.name}"?`);
     if (!confirmDelete) return;
 
     slot.activities = slot.activities.filter(a => a !== act);
-
+    window.history.replaceState({}, '');
     this.saveDayToFirebase(day);
     this.cdr.detectChanges();
   }
