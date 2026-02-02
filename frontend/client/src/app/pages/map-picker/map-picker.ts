@@ -47,7 +47,7 @@ export class MapPicker implements OnInit {
     const navState = history.state as { date?: string; };
     this.returnDate = navState.date!;
     // Create map
-    this.map = L.map('map').setView([40.7128, -74.0060], 13);
+    this.map = L.map('map').setView([20, 10], 2);
 
 
     // Load tiles

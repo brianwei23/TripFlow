@@ -322,11 +322,13 @@ export class HomeComponent {
       location: act.location,
       actualCost: act.actualCost
     };
+    this.cdr.detectChanges();
   }
 
 
   cancelEditActivity(act: Activity) {
     act.isEditing = false;
+    this.cdr.detectChanges();
   }
 
 
