@@ -35,17 +35,15 @@ export class MapPicker implements OnInit {
   private marker!: L.Marker;
   private returnDate!: string;
 
-
+  private savedState: any;
   selectedLocationName: string = '';
   selectedLatLng!: L.LatLng;
 
-
   constructor(private router: Router) {}
 
-
   ngOnInit() {
-    const navState = history.state as { date?: string; };
-    this.returnDate = navState.date!;
+    this.savedState = history.state;
+    this.returnDate = this.savedState.date!;
     // Create map
     this.map = L.map('map').setView([20, 10], 2);
 
@@ -84,25 +82,16 @@ export class MapPicker implements OnInit {
 
 
   confirmLocation() {
-    const navState = history.state as { 
-      editingActivity?: Activity; 
-      tempActivity?: Activity;
-      date?: string
-      isNewActivity?: boolean;
-      slotHourLabel?: string;
-    };
-
     this.router.navigate(['/day', this.returnDate], {
       state: {
-        pickedLocation: this.selectedLocationName,
-        editingActivity: navState.editingActivity,
-        tempActivity: navState.tempActivity,
-        isNewActivity: navState.isNewActivity,
-        slotHourLabel: navState.slotHourLabel
+        ...this.savedState,
+        pickedLocation: this.selectedLocationName
       }
     });
   }
   cancel() {
-    this.router.navigate(['/day', this.returnDate]);
+    this.router.navigate(['/day', this.returnDate], {
+      state: this.savedState
+    });
   }
 }

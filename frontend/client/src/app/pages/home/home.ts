@@ -245,11 +245,13 @@ export class HomeComponent {
     day.isEditingTime = true;
     day.tempStartTime = day.startTime;
     day.tempEndTime = day.endTime;
+    this.cdr.detectChanges();
   }
 
 
   cancelEditTime(day: DayPlan) {
     day.isEditingTime = false;
+    this.cdr.detectChanges();
   }
 
 
