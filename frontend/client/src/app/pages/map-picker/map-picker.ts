@@ -13,10 +13,15 @@ L.Icon.Default.mergeOptions({
 
 interface Activity {
   name: string;
+  id?: string;
   start?: string;
   end?: string;
   expectedCost?: number;
   location?: string;
+  coords?: {
+    lat: number;
+    lng: number;
+  } | null;
   actualCost?: number | null;
   isEditing?: boolean;
   temp?: Activity;
@@ -82,13 +87,21 @@ export class MapPicker implements OnInit {
 
 
   confirmLocation() {
+    const lat = this.selectedLatLng?.lat;
+    const lng = this.selectedLatLng?.lng;
     this.router.navigate(['/day', this.returnDate], {
       state: {
-        ...this.savedState,
-        pickedLocation: this.selectedLocationName
+        pickedLocation: this.selectedLocationName,
+        pickedCoords: lat !== undefined ? {lat, lng} : null,
+
+        editingActivity: this.savedState?.editingActivity ?? null,
+        isNewActivity: this.savedState?.isNewActivity ?? false,
+        slotHourLabel: this.savedState?.slotHourLabel ?? null,
+        tempActivity: this.savedState?.tempActivity ?? null
       }
     });
   }
+
   cancel() {
     this.router.navigate(['/day', this.returnDate], {
       state: this.savedState

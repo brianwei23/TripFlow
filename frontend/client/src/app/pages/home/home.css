@@ -217,3 +217,12 @@ h3 {
     padding: 0;
     border-radius: 10%;
 }
+
+.weather-btn {
+    background: #e3f2fd;
+    border: none;
+    border-radius: 6px;
+    padding: 6px 10px;
+    cursor: pointer;
+    font-size: 16px;
+}

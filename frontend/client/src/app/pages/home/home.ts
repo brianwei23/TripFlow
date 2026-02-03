@@ -28,6 +28,10 @@ interface Activity {
   end?: string;
   expectedCost?: number;
   location?: string;
+  coords?: {
+    lat: number;
+    lng: number;
+  } | null;
   actualCost?: number | null;
   isEditing?: boolean;
   temp?: Activity;
@@ -137,6 +141,8 @@ export class HomeComponent {
 
             // Apply picked location
             if (navState.pickedLocation) editingAct.temp!.location = navState.pickedLocation;
+
+            if (navState.pickedCoords) editingAct.temp!.coords = navState.pickedCoords;
           }
         }
         if (navState?.isNewActivity && navState.slotHourLabel && this.days.length) {
@@ -146,6 +152,7 @@ export class HomeComponent {
           if (slot) {
             if (navState.tempActivity) slot.tempActivity = { ...navState.tempActivity };
             if (navState.pickedLocation) slot.tempActivity.location = navState.pickedLocation;
+            if (navState.pickedCoords) slot.tempActivity.coords = navState.pickedCoords;
             slot.isEditing = true;
           }
         }
@@ -182,6 +189,7 @@ export class HomeComponent {
           end: act.end,
           expectedCost: act.expectedCost,
           location: act.location || '',
+          coords: act.coords || null,
           actualCost: act.actualCost !== undefined ? act.actualCost : null
         }))
       }))
@@ -324,6 +332,7 @@ export class HomeComponent {
       end: act.end,
       expectedCost: act.expectedCost,
       location: act.location,
+      coords: act.coords ?? null,
       actualCost: act.actualCost
     };
     this.cdr.detectChanges();
@@ -369,6 +378,7 @@ export class HomeComponent {
     act.end = temp.end;
     act.expectedCost = temp.expectedCost;
     act.location = temp.location;
+    act.coords = temp.coords ?? null;
     act.actualCost = temp.actualCost;
     act.isEditing = false;
     act.temp = undefined;
