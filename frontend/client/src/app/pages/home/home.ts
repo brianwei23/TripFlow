@@ -23,6 +23,7 @@ interface PersistedHourSlot {
 
 interface Activity {
   name: string;
+  id?: string; // For activities with duplicate names
   start?: string;
   end?: string;
   expectedCost?: number;
@@ -30,8 +31,6 @@ interface Activity {
   actualCost?: number | null;
   isEditing?: boolean;
   temp?: Activity;
-
-
 }
 
 
@@ -123,12 +122,11 @@ export class HomeComponent {
         }
       }
 
-
         if (navState?.editingActivity) {
           const editingAct = this.days
             .flatMap(d => d.slots)
             .flatMap(s => s.activities)
-            .find(a => a.name === navState.editingActivity?.name);
+            .find(a => a.id === navState.editingActivity?.id);
           if (editingAct) {
             editingAct.isEditing = true;
 
@@ -169,7 +167,7 @@ export class HomeComponent {
 
   async saveDayToFirebase(day: DayPlan) {
     const uid = this.auth.uid;
-
+    if (!uid) return;
 
     const sanitizedDay: PersistedDayPlan = {
       date: day.date,
@@ -179,6 +177,7 @@ export class HomeComponent {
         hourLabel: slot.hourLabel,
         activities: slot.activities.map(act => ({
           name: act.name,
+          id: act.id || Date.now().toString() + Math.random().toString(36).slice(2, 11),
           start: act.start,
           end: act.end,
           expectedCost: act.expectedCost,
@@ -294,13 +293,16 @@ export class HomeComponent {
           const [sStart, sEnd] = s.hourLabel.split(' - ');
           const start24 = this.parseHourLabelTo24(sStart);
           const end24 = this.parseHourLabelTo24(sEnd);
-          return act.start! >= start24 && act.end! <= end24;
+          return act.start! >= start24 && act.start! < end24;
         });
         if (fits) {
           fits.activities.push(act);
         }
       }
     }
+
+    // Sort activities inside each slot by start time
+    newSlots.forEach(s => s.activities.sort((a, b) => a.start!.localeCompare(b.start!)));
 
 
     day.startTime = day.tempStartTime;
@@ -483,8 +485,12 @@ export class HomeComponent {
       return;
     }
 
+    const finalActivity: Activity = {
+      ...act,
+      id: act.id || Date.now().toString() + Math.random().toString(36).slice(2, 11)
+    };
 
-    slot.activities.push({...act});
+    slot.activities.push(finalActivity);
 
 
     // Sort the activities by start time
@@ -596,7 +602,7 @@ export class HomeComponent {
   openMapForActivity(act: Activity) {
     if (!act.temp) act.temp = {...act};
     this.router.navigate(['/map-picker'], {
-      state: { date: this.selectedDate, editingActivity: act.temp }
+      state: { date: this.selectedDate, editingActivity: {...act.temp, id: act.id}}
     });
   }
 
@@ -612,7 +618,21 @@ export class HomeComponent {
   }
 
   toggleAddForm(slot: HourSlot) {
+    this.days[0]?.slots.forEach(s => s.isEditing = false);
     slot.isEditing = true;
+    this.cdr.detectChanges();
+  }
+
+  cancelAddActivity(slot: HourSlot) {
+    slot.isEditing = false;
+    slot.tempActivity = {
+      name: '',
+      start: '',
+      end: '',
+      expectedCost: undefined,
+      actualCost: null,
+      location: ''
+    };
     this.cdr.detectChanges();
   }
 
