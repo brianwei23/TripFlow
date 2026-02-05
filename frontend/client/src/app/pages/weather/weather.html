@@ -1,0 +1,20 @@
+<div class="overlay">
+    <div class="popup">
+        <h2>Weather for {{date}}</h2>
+        <p *ngIf="location"><b>Location:</b> {{location}}</p>
+        <ng-container *ngIf="weatherData; else loading">
+            <p><b>High:</b> {{weatherData.maxtemp_c}}°C ({{weatherData.maxtemp_f}}°F)</p>
+            <p><b>Low:</b> {{weatherData.mintemp_c}}°C ({{weatherData.mintemp_f}}°F)</p>
+            <p><b>Condition:</b> {{weatherData.condition.text}}</p>
+            <p><b>Precipitation:</b> {{weatherData.totalprecip_mm}} mm ({{weatherData.totalprecip_in}} in)</p>
+            <p><b>Chance of Rain:</b> {{weatherData.daily_chance_of_rain}}%</p>
+            <p><b>Wind Speed:</b> {{weatherData.maxwind_kph}} kph ({{weatherData.maxwind_mph}} mph)</p>
+        </ng-container>
+
+        <ng-template #loading>
+            <p>Loading weather...</p>
+        </ng-template>
+
+        <button type="button" (click)="closePopup()">Close</button>
+    </div>
+</div>

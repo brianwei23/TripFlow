@@ -5,7 +5,7 @@ import { Router, ActivatedRoute, RouterModule } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { Firestore } from '@angular/fire/firestore';
 import { collection, doc, getDoc, getDocs, setDoc, deleteDoc } from 'firebase/firestore';
-
+import { WeatherComponent } from '../weather/weather';
 
 interface HourSlot {
   hourLabel: string;
@@ -59,7 +59,7 @@ interface PersistedDayPlan {
 
 @Component({
   selector: 'app-home',
-  imports: [FormsModule, CommonModule, RouterModule],
+  imports: [FormsModule, CommonModule, RouterModule, WeatherComponent],
   standalone: true,
   templateUrl: './home.html',
   styleUrls: ['./home.css'],
@@ -82,19 +82,19 @@ export class HomeComponent {
   // Date tiles sort
   sortRecentFirst: boolean = false;
 
-
   currentDayIndex: number = -1;
-
 
   selectedDate: string = '';
   firstDayAdded: boolean = false;
 
-
   private route = inject(ActivatedRoute);
-
 
   isHomePage: boolean = false;
 
+  showWeatherPopup = false;
+  weatherData: any = null;
+  weatherDate: string = '';
+  weatherLocation: string = '';
 
   ngOnInit() {
     this.route.params.subscribe(async params => {
@@ -677,5 +677,55 @@ export class HomeComponent {
 
     this.days = this.days.filter(d => d.date !== day.date);
     this.router.navigate(['/home']);
+  }
+
+  async openWeather(day: DayPlan, coords: {lat: number; lng: number} | null | undefined) {
+    if (!coords) {
+      alert('You must select a location from the map');
+      return;
+    }
+    this.showWeatherPopup = true;
+    this.weatherDate = day.date;
+    this.weatherData = null;
+
+    try {
+      const res = await fetch(
+        `http://localhost:5000/api/weather?lat=${coords.lat}&lng=${coords.lng}&date=${day.date}`
+      );
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || `HTTP error status: ${res.status}`);
+      }
+
+      const data=  await res.json();
+      console.log('Weather API response:', data);
+
+      if (!data.forecast || !data.forecast[0]) {
+        console.error('Missing forecast data:', data);
+        throw new Error('Invalid weather data received, no forecast data.');
+      }
+
+      const forecastDay = data.forecast[0].day;
+      forecastDay.date = data.forecast[0].date;
+
+      if (!forecastDay) {
+        console.error('Missing day data:', data.forecast[0]);
+        throw new Error('Invalid weather data received, there is no day data');
+      }
+      console.log('Forecast day data:', forecastDay);
+      this.weatherData = forecastDay;
+      this.weatherLocation = data.location || '';
+      this.cdr.detectChanges();
+    } catch (error) {
+      console.error('Weather fetch error:', error);
+      alert(`Failed to load weather: ${error}. Forecast possibly unavailable. You may have to use a day closer to the current day.`);
+      this.showWeatherPopup = false;
+    }
+  }
+
+  closeWeatherPopup() {
+    this.showWeatherPopup = false;
+    this.cdr.detectChanges();
   }
 }

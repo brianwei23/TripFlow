@@ -41,6 +41,7 @@ testem.log
 __screenshots__/
 **/venv/
 **/.angular/
+**/.env
 
 # System files
 .DS_Store

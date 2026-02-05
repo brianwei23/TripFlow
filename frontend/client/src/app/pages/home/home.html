@@ -102,6 +102,10 @@
                       }
                     </div>
 
+                    <button class="weather-btn" (click)="openWeather(day, act.coords)">
+                      ☀️ Weather
+                    </button>
+
                     <button class="edit-btn" (click)="editActivity(act)">
                       Edit
                     </button>
@@ -187,9 +191,6 @@
 
             <!-- Adds more activities -->
             <div class="add-activity-wrapper"> 
-              <button class="weather-btn">
-                ☀️ Weather
-              </button>
               <button class="add-activity-btn" *ngIf="!slot.isEditing" (click)="toggleAddForm(slot)">
                 + Add Activity
               </button> 
@@ -204,3 +205,10 @@
         <button class="add-day-btn" [routerLink]="['/home']">Back to Home</button>
   </div>
 }
+<app-weather
+  *ngIf="showWeatherPopup"
+  [weatherData]="weatherData"
+  [date]="weatherDate"
+  [location]="weatherLocation"
+  (close)="closeWeatherPopup() ">
+</app-weather>
