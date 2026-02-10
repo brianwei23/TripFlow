@@ -728,4 +728,64 @@ export class HomeComponent {
     this.showWeatherPopup = false;
     this.cdr.detectChanges();
   }
+
+  private getAllActivities(day: DayPlan): Activity[] {
+    return day.slots.flatMap(slot => slot.activities);
+  }
+
+  getExpectedTotalCost(day: DayPlan): number {
+    return this.getAllActivities(day).reduce((sum, act) => sum + (act.expectedCost ?? 0), 0);
+  }
+
+  getActualTotalCost(day: DayPlan): number {
+    return this.getAllActivities(day).reduce((sum, act) => sum + (act.actualCost ?? 0), 0);
+  }
+
+  getBudgetDifferencePercent(day: DayPlan): number {
+    const expected = this.getExpectedTotalCost(day);
+    const actual = this.getActualTotalCost(day);
+
+    if (expected === 0) return 0;
+    return ((actual - expected) / expected) * 100;
+  }
+
+  getPlanningAccuracyScore(day: DayPlan): number {
+    const expected = this.getExpectedTotalCost(day);
+    const actual = this.getActualTotalCost(day);
+
+    if (expected === 0) return 1;
+
+    const deviation = Math.abs(actual - expected);
+    const accuracy = 1 - deviation / expected;
+    return Math.max(0, Math.min(1, accuracy));
+  }
+
+  getTotalScheduledHours(day: DayPlan): number {
+    const start = this.parseTimeToMinutes(day.startTime);
+    const end = this.parseTimeToMinutes(day.endTime);
+
+    if (end <= start) return 0;
+    return (end - start) / 60;
+  }
+
+  getActualCostDensity(day: DayPlan): number {
+    const actual = this.getActualTotalCost(day);
+    const hours = this.getTotalScheduledHours(day);
+
+    if (hours === 0) return 0;
+
+    return actual / hours;
+  }
+
+  getExpectedCostDensity(day: DayPlan): number {
+    const expected = this.getExpectedTotalCost(day);
+    const hours = this.getTotalScheduledHours(day);
+    if (hours === 0) return 0;
+    return expected / hours;
+  }
+
+  private parseTimeToMinutes(time: string): number {
+    const [h, m] = time.split(':').map(Number);
+    return h * 60 + m;
+  }
 }

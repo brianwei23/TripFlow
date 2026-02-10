@@ -1,4 +1,4 @@
-<h1>Your Calendar</h1>
+<h1>Your TripFlow Calendar</h1>
 
 <button class="logout-btn" (click)="logout()">Logout</button>
 
@@ -201,10 +201,48 @@
     </div>
   }
 
-  <div class="next-prev-buttons">
+  @for (day of showCurrentDay(); track day.date) {}
+  <div class="day-summary" *ngFor="let day of showCurrentDay()">
+    <h3>TripFlow Summary for the Day</h3>
+    <div class="summary-stats">
+      <p>
+        <b>Expected:</b>
+        ${{getExpectedTotalCost(day) | number:'1.2-2'}}
+      </p>
+
+      <p>
+        <b>Actual:</b>
+        ${{getActualTotalCost(day) | number:'1.2-2'}}
+      </p>
+
+      <p>
+        <b>Difference:</b>
+        {{getBudgetDifferencePercent(day) | number:'1.0-1'}}%
+      </p>
+
+      <p>
+        <b>Planning Accuracy:</b>
+        {{getPlanningAccuracyScore(day) * 100 | number:'1.0-0'}}%
+      </p>
+
+      <p>
+        <b>Expected Cost Density:</b>
+        ${{getExpectedCostDensity(day) | number:'1.2-2'}} / hour
+      </p>
+
+      <p>
+        <b>Actual Cost Density:</b>
+        ${{getActualCostDensity(day) | number:'1.2-2'}}
+        / hour
+      </p>
+    </div>
+
+    <div class="next-prev-buttons">
         <button class="add-day-btn" [routerLink]="['/home']">Back to Home</button>
+    </div>
   </div>
-}
+  }
+
 <app-weather
   *ngIf="showWeatherPopup"
   [weatherData]="weatherData"

@@ -226,3 +226,21 @@ h3 {
     cursor: pointer;
     font-size: 16px;
 }
+
+.day-summary {
+    margin-top: 40px;
+    padding: 24px;
+    border-top: 1px solid #ddd;
+    text-align: center;
+}
+
+.summary-stats {
+    display: inline-block;
+    text-align: left;
+    margin-top: 16px;
+}
+
+.summary-stats p {
+    margin: 6px 0;
+    font-size: 1.05rem;
+}
