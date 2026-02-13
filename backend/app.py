@@ -99,6 +99,7 @@ def analyze_day():
         - Budget feedback
         - Cost efficiency feedback
         - Overall planning score (1-100)
+        - Feasibility
         - And anything else important
         """
 

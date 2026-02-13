@@ -44,6 +44,8 @@ interface DayPlan {
   isEditingTime?: boolean;
   tempStartTime?: string;
   tempEndTime?: string;
+  aiAnalysisResult?: string;
+  aiHasAnalyzed?: boolean;
 }
 
 interface PersistedDayPlan {
@@ -790,8 +792,15 @@ export class HomeComponent {
   }
 
   async analyzeCurrentDay(day: DayPlan) {
+    if (day.aiHasAnalyzed && day.aiAnalysisResult) {
+      this.aiAnalysisResult = day.aiAnalysisResult;
+      this.showAIAnalysisPopup = true;
+      return;
+    }
+
     this.showAIAnalysisPopup = true;
     this.isAnalyzing = true;
+
     this.aiAnalysisResult = '';
     this.cdr.detectChanges();
 
@@ -808,9 +817,12 @@ export class HomeComponent {
         actualCostDensity: this.getActualCostDensity(day)
       }
     };
+
     try {
       const result = await this.aiService.analyzeDay(payload);
       this.aiAnalysisResult = result.analysis;
+      day.aiAnalysisResult = result.analysis;
+      day.aiHasAnalyzed = true;
     } catch (err) {
       console.error(err);
       this.aiAnalysisResult = "Failed to connect to the AI.";
@@ -827,6 +839,10 @@ export class HomeComponent {
 
   formatAIResponse(text: string): string {
     if (!text) return '';
-    return text.replace(/\n/g, '<br>');
+    let formatted = text;
+    // Ensure bold font if it's in response
+    formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+    formatted = formatted.replace(/\n/g, '<br>');
+    return formatted;
   }
 }
