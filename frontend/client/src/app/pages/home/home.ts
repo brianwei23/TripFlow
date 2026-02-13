@@ -33,6 +33,7 @@ interface Activity {
   } | null;
   actualCost?: number | null;
   isEditing?: boolean;
+  source?: 'user' | 'ai';
   temp?: Activity;
 }
 
@@ -97,6 +98,8 @@ export class HomeComponent {
   showAIAnalysisPopup = false;
   isAnalyzing = false;
   aiAnalysisResult = '';
+
+  isAutofilling = false;
 
   ngOnInit() {
     this.route.params.subscribe(async params => {
@@ -844,5 +847,119 @@ export class HomeComponent {
     formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
     formatted = formatted.replace(/\n/g, '<br>');
     return formatted;
+  }
+
+  getEmptyTimeSlots(day: DayPlan) {
+    const activities = this.getAllActivities(day)
+      .sort((a, b) => (a.start || "").localeCompare(b.start || ""));
+
+    const gaps: { start: string; end: string } [] = [];
+
+    let current = day.startTime;
+
+    for (const act of activities) {
+      if (act.start! > current) {
+        gaps.push({ start: current, end: act.start! });
+      }
+      current = act.end!;
+    }
+    if (current < day.endTime) {
+      gaps.push({ start: current, end: day.endTime });
+    }
+    return gaps;
+  }
+
+  async autofillCurrentDay(day: DayPlan) {
+    const emptySlots = this.getEmptyTimeSlots(day);
+    if (emptySlots.length === 0) {
+      alert("No empty time slots available.");
+      return;
+    }
+
+    this.isAutofilling = true;
+    this.cdr.detectChanges();
+
+    const payload = {
+      existingActivities: this.getAllActivities(day),
+      emptySlots,
+      dayStart: day.startTime,
+      dayEnd: day.endTime
+    };
+
+    try {
+      const response = await this.aiService.autofillDay(payload);
+      let cleanJson = response.result;
+      if (typeof cleanJson === 'string') {
+        cleanJson = cleanJson.replace(/```json/g, '').replace(/```/g, '').trim();
+      }
+      const parsed = JSON.parse(cleanJson);
+
+      if (!parsed.activities || !Array.isArray(parsed.activities)) {
+        throw new Error("Invalid AI format");
+      }
+
+      const newActivities = parsed.activities.slice(0, 4);
+      let addedCount = 0;
+      for (const act of newActivities) {
+        if (act.name && act.start && act.end) {
+          this.insertAIActivity(day, act);
+          addedCount++;
+        }
+      }
+      if (addedCount > 0) {
+        await this.saveDayToFirebase(day);
+      } else {
+        alert("AI did not return any valid activities to add.");
+      }
+    } catch (err) {
+      console.error("Autofill error:", err);
+      alert("Autofill failed.");
+    } finally {
+      this.isAutofilling = false;
+      this.cdr.detectChanges();
+    }
+  }
+
+  insertAIActivity(day: DayPlan, aiActivity: any) {
+    const aiStartMins = this.parseTimeToMinutes(aiActivity.start);
+
+    const slot = day.slots.find(s => {
+      const slotStartStr = s.hourLabel.split(' - ')[0];
+      const slotStartMins = this.parseLabelToMinutes(slotStartStr);
+      const slotEndMins = slotStartMins + 60;
+      return aiStartMins >= slotStartMins && aiStartMins < slotEndMins;
+    });
+
+    if (!slot) { 
+      console.warn('Could not find slot for:', aiActivity.start);
+      const lastSlot = day.slots[day.slots.length - 1];
+      if (lastSlot) this.pushAndSortActivity(lastSlot, aiActivity);
+      return;
+    }
+    this.pushAndSortActivity(slot, aiActivity);
+  }
+
+  private pushAndSortActivity(slot: HourSlot, aiActivity: any) {
+    slot.activities.push({
+      name: aiActivity.name,
+      location: aiActivity.location || '',
+      start: aiActivity.start,
+      end: aiActivity.end,
+      expectedCost: aiActivity.expectedCost || 0,
+      actualCost: null,
+      isEditing: false,
+      source: 'ai'
+    });
+    slot.activities.sort((a, b) => (a.start || "").localeCompare(b.start || ""));
+    this.cdr.detectChanges();
+  }
+
+  private parseLabelToMinutes(label: string): number {
+    let [time, modifier] = label.split(' ');
+    let [hours, minutes] = time.split(':').map(Number);
+
+    if (modifier === 'PM' && hours < 12) hours += 12;
+    if (modifier === 'AM' && hours === 12) hours = 0;
+    return hours * 60 + minutes;
   }
 }

@@ -98,8 +98,8 @@ def analyze_day():
         - Time management feedback
         - Budget feedback
         - Cost efficiency feedback
-        - Overall planning score (1-100)
         - Feasibility
+        - Overall planning score (1-100)
         - And anything else important
         """
 
@@ -119,6 +119,62 @@ def analyze_day():
         ai_message = result["choices"][0]["message"]["content"]
         return jsonify({"analysis": ai_message})
     except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    
+@app.route("/api/autofill-day", methods=["POST", "OPTIONS"])
+def autofill_day():
+    if request.method == "OPTIONS":
+        return jsonify({"status": "ok"}), 200
+    
+    data = request.json
+
+    if not data:
+        return jsonify({"error": "Missing data"}), 400
+
+    headers = {
+        "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+        "Content-Type": "application/json",
+        "HTTP-Referer": "http://localhost:4200",
+        "X-Title": "TripFlow"
+    }
+
+    prompt = f"""
+    Task: Fill these empty time slots with travel activities.
+    Empty Slots: {data.get('emptySlots')}
+    Existing Activities: {data.get('existingActivities')}
+    Return EXACTLY VALID JSON. This means no markdown and no conversation.
+    Start times must be in the time slot it's in. End times must be after start times but don't have to be in the time slot in question.
+    Example format:
+    {{
+        "activities": [
+            {{ "name": "Lunch at Disneyland", "start": "11:00", "end": "12:00", "expectedCost": 40, "location": "Disneyland Anaheim"}}
+        ]
+    }}
+    """
+    try:
+        response = requests.post(
+            "https://openrouter.ai/api/v1/chat/completions",
+            headers=headers,
+            json={
+                "model": "nvidia/nemotron-3-nano-30b-a3b:free",
+                "messages": [
+                    {"role": "user", "content": prompt}
+                ]
+            }
+        )
+
+        if response.status_code != 200:
+            return jsonify({"error": f"AI Provider Error: {response.status_code}"}), 500
+
+        result = response.json()
+        if "choices" in result and len(result["choices"]) > 0:
+            content = result["choices"][0]["message"]["content"]
+            return jsonify({"result": content})
+
+        return jsonify({"error": "No AI response content"}), 500
+    
+    except Exception as e:
+        print(f"Server Error: {e}")
         return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":

@@ -77,10 +77,17 @@
             </div>
           }
          </div> 
-        <button class="ai-autofill-btn">
+        <button class="ai-autofill-btn" (click)="autofillCurrentDay(day)">
           Autofill with AI
         </button>
       </div>
+
+      @if (isAutofilling) {
+        <div class="ai-loading-inline">
+          <div class="spinner-small"></div>
+          <span>AI is planning your trip...</span>
+        </div>
+      }
       @if (!day.isEditingTime) {
         <p>
           <b>{{formatHourString(day.startTime)}} - {{formatHourString(day.endTime)}}</b>
