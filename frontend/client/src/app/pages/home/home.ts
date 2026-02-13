@@ -2,6 +2,7 @@ import { Component, inject, ChangeDetectorRef } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../services/auth.service';
 import { Router, ActivatedRoute, RouterModule } from '@angular/router';
+import { AIService } from '../../services/ai.service';
 import { CommonModule } from '@angular/common';
 import { Firestore } from '@angular/fire/firestore';
 import { collection, doc, getDoc, getDocs, setDoc, deleteDoc } from 'firebase/firestore';
@@ -14,12 +15,10 @@ interface HourSlot {
   isEditing: boolean;
 }
 
-
 interface PersistedHourSlot {
   hourLabel: string;
   activities: Activity[];
 }
-
 
 interface Activity {
   name: string;
@@ -37,7 +36,6 @@ interface Activity {
   temp?: Activity;
 }
 
-
 interface DayPlan {
   date: string;
   startTime: string;
@@ -48,14 +46,12 @@ interface DayPlan {
   tempEndTime?: string;
 }
 
-
 interface PersistedDayPlan {
   date: string;
   startTime: string;
   endTime: string;
   slots: PersistedHourSlot[];
 }
-
 
 @Component({
   selector: 'app-home',
@@ -68,13 +64,10 @@ export class HomeComponent {
   days: DayPlan[] = [];
   private cdr = inject(ChangeDetectorRef);
 
-
   private auth = inject(AuthService);
   private router = inject(Router);
 
-
   private firestore = inject(Firestore);
-
 
   showTimePicker = false;
   tempStartTime = '';
@@ -89,12 +82,19 @@ export class HomeComponent {
 
   private route = inject(ActivatedRoute);
 
+  private aiService = inject(AIService);
+
   isHomePage: boolean = false;
 
   showWeatherPopup = false;
   weatherData: any = null;
   weatherDate: string = '';
   weatherLocation: string = '';
+
+  // AI Analysis variables
+  showAIAnalysisPopup = false;
+  isAnalyzing = false;
+  aiAnalysisResult = '';
 
   ngOnInit() {
     this.route.params.subscribe(async params => {
@@ -787,5 +787,46 @@ export class HomeComponent {
   private parseTimeToMinutes(time: string): number {
     const [h, m] = time.split(':').map(Number);
     return h * 60 + m;
+  }
+
+  async analyzeCurrentDay(day: DayPlan) {
+    this.showAIAnalysisPopup = true;
+    this.isAnalyzing = true;
+    this.aiAnalysisResult = '';
+    this.cdr.detectChanges();
+
+    const payload = {
+      date: day.date,
+      startTime: day.startTime,
+      endTime: day.endTime,
+      activities: this.getAllActivities(day),
+      metrics: {
+        expectedTotal: this.getExpectedTotalCost(day),
+        actualTotal: this.getActualTotalCost(day),
+        planningAccuracy: this.getPlanningAccuracyScore(day),
+        expectedCostDensity: this.getExpectedCostDensity(day),
+        actualCostDensity: this.getActualCostDensity(day)
+      }
+    };
+    try {
+      const result = await this.aiService.analyzeDay(payload);
+      this.aiAnalysisResult = result.analysis;
+    } catch (err) {
+      console.error(err);
+      this.aiAnalysisResult = "Failed to connect to the AI.";
+    } finally {
+      this.isAnalyzing = false;
+      this.cdr.detectChanges();
+    }
+  }
+  
+  closeAIPopup() {
+    this.showAIAnalysisPopup = false;
+    this.cdr.detectChanges();
+  }
+
+  formatAIResponse(text: string): string {
+    if (!text) return '';
+    return text.replace(/\n/g, '<br>');
   }
 }

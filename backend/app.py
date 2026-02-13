@@ -15,7 +15,9 @@ CORS(app, resources={
         "allow_headers": ["Content-Type"]
     }
 })
+
 WEATHER_API_KEY = os.getenv("WEATHER_API_KEY")
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 
 @app.route("/api/weather", methods=["GET"])
 def get_weather():
@@ -57,6 +59,66 @@ def get_weather():
         })
     except Exception as e:
         return jsonify({"error": f"Weather API error: {str(e)}"}), 500
+    
+@app.route("/api/analyze-day", methods=["POST", "OPTIONS"])
+def analyze_day():
+    if request.method == "OPTIONS":
+        return jsonify({"status": "ok"}), 200
+    
+    data = request.json
+
+    if not data:
+        return jsonify({"error": "Missing data"}), 400
+    
+    if not OPENROUTER_API_KEY:
+        print("Error: OPENROUTER API key is missing")
+        return jsonify({"error": "Server missing API key"}), 500
+    
+    try:
+        headers = {
+            "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+            "Content-Type": "application/json"
+        }
+
+        prompt = f"""
+        Analyze the travel schedule and give good advice:
+
+        Date: {data['date']}
+
+        Time Range: {data['startTime']} - {data['endTime']}
+
+        Activities:
+        {data['activities']}
+
+        Metrics: 
+        {data['metrics']}
+
+        Please give:
+        - Tourist destination feedback and suggestions
+        - Time management feedback
+        - Budget feedback
+        - Cost efficiency feedback
+        - Overall planning score (1-100)
+        - And anything else important
+        """
+
+        response = requests.post(
+            "https://openrouter.ai/api/v1/chat/completions",
+            headers=headers,
+            json={
+                "model": "arcee-ai/trinity-mini:free",
+                "messages": [
+                    {
+                        "role": "user", "content": prompt
+                    }
+                ]
+            }
+        )
+        result = response.json()
+        ai_message = result["choices"][0]["message"]["content"]
+        return jsonify({"analysis": ai_message})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":
     app.run(debug=True, port=5000)

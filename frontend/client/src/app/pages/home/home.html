@@ -50,6 +50,14 @@
   @for (day of days; track day.date) {
     <div class="day-card">
       <h3>{{day.date}} Schedule</h3>
+      <div class="ai-row">
+        <button class="ai-analyze-btn" (click)="analyzeCurrentDay(day)">
+          Analyze with AI
+        </button>
+        <button class="ai-autofill-btn">
+          Autofill with AI
+        </button>
+      </div>
       @if (!day.isEditingTime) {
         <p>
           <b>{{formatHourString(day.startTime)}} - {{formatHourString(day.endTime)}}</b>
@@ -250,3 +258,29 @@
   [location]="weatherLocation"
   (close)="closeWeatherPopup() ">
 </app-weather>
+
+@if (showAIAnalysisPopup) {
+  <div class="modal-overlay">
+    <div class="modal-content ai-modal">
+      <div class="modal-header">
+        <h2> AI Trip Analysis </h2>
+        <button class="close-btn-x" (click)="closeAIPopup()">X</button>
+      </div>
+
+      <div class="modal-body">
+        @if (isAnalyzing) {
+          <div class="loading-state">
+            <div class="spinner"></div>
+            <p>Analyzing your trip...</p>
+          </div>
+        } @else {
+          <div class="ai-response-text" [innerHTML]="formatAIResponse(aiAnalysisResult)"></div>
+        }
+      </div>
+
+      <div class="modal-footer">
+        <button class="close-btn" (click)="closeAIPopup()">Close</button>
+      </div>
+    </div>
+  </div>
+}
