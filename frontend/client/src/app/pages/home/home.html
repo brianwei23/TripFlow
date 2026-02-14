@@ -121,7 +121,7 @@
             </div>
 
             <div class="activities-column">
-              @for (act of slot.activities; track act.name) {
+              @for (act of slot.activities; track act.id) {
                 <div class="activity-summary">
                   @if (!act.isEditing) {
                     <strong>{{ act.name }}</strong><br />

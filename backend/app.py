@@ -144,6 +144,7 @@ def autofill_day():
     Existing Activities: {data.get('existingActivities')}
     Return EXACTLY VALID JSON. This means no markdown and no conversation.
     Start times must be in the time slot it's in. End times must be after start times but don't have to be in the time slot in question.
+    Be a bit specific on activity locations and names. For example, you can include city name, state/province, or country in location. 
     Example format:
     {{
         "activities": [

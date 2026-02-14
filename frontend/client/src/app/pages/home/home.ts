@@ -321,6 +321,9 @@ export class HomeComponent {
     day.startTime = day.tempStartTime;
     day.endTime = day.tempEndTime;
     day.slots = newSlots;
+
+    this.invalidateAIAnalysis(day);
+
     day.isEditingTime = false;
 
 
@@ -385,6 +388,9 @@ export class HomeComponent {
     act.location = temp.location;
     act.coords = temp.coords ?? null;
     act.actualCost = temp.actualCost;
+
+    this.invalidateAIAnalysis(day); 
+
     act.isEditing = false;
     act.temp = undefined;
 
@@ -507,6 +513,7 @@ export class HomeComponent {
 
     slot.activities.push(finalActivity);
 
+    this.invalidateAIAnalysis(day);
 
     // Sort the activities by start time
     slot.activities.sort((a, b) => {
@@ -664,6 +671,7 @@ export class HomeComponent {
     if (!confirmDelete) return;
 
     slot.activities = slot.activities.filter(a => a !== act);
+    this.invalidateAIAnalysis(day);
     window.history.replaceState({}, '');
     this.saveDayToFirebase(day);
     this.cdr.detectChanges();
@@ -797,7 +805,10 @@ export class HomeComponent {
   async analyzeCurrentDay(day: DayPlan) {
     if (day.aiHasAnalyzed && day.aiAnalysisResult) {
       this.aiAnalysisResult = day.aiAnalysisResult;
+      this.showAIAnalysisPopup = false;
+      this.cdr.detectChanges();
       this.showAIAnalysisPopup = true;
+      this.cdr.detectChanges();
       return;
     }
 
@@ -907,6 +918,7 @@ export class HomeComponent {
         }
       }
       if (addedCount > 0) {
+        this.invalidateAIAnalysis(day);
         await this.saveDayToFirebase(day);
       } else {
         alert("AI did not return any valid activities to add.");
@@ -937,6 +949,11 @@ export class HomeComponent {
       return;
     }
     this.pushAndSortActivity(slot, aiActivity);
+  }
+
+  private invalidateAIAnalysis(day: DayPlan) {
+    day.aiHasAnalyzed = false;
+    day.aiAnalysisResult = '';
   }
 
   private pushAndSortActivity(slot: HourSlot, aiActivity: any) {
