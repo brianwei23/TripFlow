@@ -8,13 +8,7 @@ load_dotenv()
 
 app = Flask(__name__)
 # Allow requests from Angular
-CORS(app, resources={
-    r"/api/*": {
-        "origins": ["http://localhost:4200"],
-        "methods": ["GET", "POST", "OPTIONS"],
-        "allow_headers": ["Content-Type"]
-    }
-})
+CORS(app)
 
 WEATHER_API_KEY = os.getenv("WEATHER_API_KEY")
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
@@ -180,4 +174,4 @@ def autofill_day():
         return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":
-    app.run(debug=True, port=5000)
+    app.run()
