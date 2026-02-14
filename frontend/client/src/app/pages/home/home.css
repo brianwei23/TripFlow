@@ -150,6 +150,9 @@ h3 {
 .activity-summary .activity-cost {
     font-size: 20px;
     margin: 4px 0;
+    gap: 6px;
+    display: flex;
+    flex-direction: column;
 }
 
 .map-btn {
@@ -167,7 +170,7 @@ h3 {
 .activities-column {
     display: flex;
     flex-direction: column; /* vertical stack */
-    gap: 6px;
+    gap: 15px;
     flex: 1;
     align-items: center;
 }
@@ -289,6 +292,7 @@ h3 {
     display: flex;
     align-items: flex-start;
     gap: 12px;
+    margin-bottom: 20px;
 }
 
 .hour-label {

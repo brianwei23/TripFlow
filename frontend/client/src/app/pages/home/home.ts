@@ -189,7 +189,7 @@ export class HomeComponent {
         hourLabel: slot.hourLabel,
         activities: slot.activities.map(act => ({
           name: act.name,
-          id: act.id || Date.now().toString() + Math.random().toString(36).slice(2, 11),
+          id: act.id,
           start: act.start,
           end: act.end,
           expectedCost: act.expectedCost,
@@ -933,6 +933,16 @@ export class HomeComponent {
   }
 
   insertAIActivity(day: DayPlan, aiActivity: any) {
+    const allExisting = this.getAllActivities(day);
+    const isDuplicate = allExisting.some(existing => 
+      existing.name.toLowerCase() === aiActivity.name.toLowerCase() ||
+      existing.start === aiActivity.start
+    );
+    if (isDuplicate) {
+      console.log(`Skipping duplicate AI activity: ${aiActivity.name}`);
+      return;
+    }
+
     const aiStartMins = this.parseTimeToMinutes(aiActivity.start);
 
     const slot = day.slots.find(s => {
@@ -957,7 +967,10 @@ export class HomeComponent {
   }
 
   private pushAndSortActivity(slot: HourSlot, aiActivity: any) {
+    const newId = Date.now().toString() + Math.random().toString(36).slice(2, 11);
+
     slot.activities.push({
+      id: newId,
       name: aiActivity.name,
       location: aiActivity.location || '',
       start: aiActivity.start,
