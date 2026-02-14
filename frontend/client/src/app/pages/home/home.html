@@ -11,12 +11,9 @@
   @if (showTimePicker) {
     <div class="time-picker">
       <h3>Select Time Range for {{selectedDate}}</h3>
-      <label>
+      <label class="time-select">
          Start time:
          <input type="time" [(ngModel)]="tempStartTime">
-      </label>
-    
-      <label>
          End time:
          <input type="time" [(ngModel)]="tempEndTime">
       </label>
@@ -27,8 +24,8 @@
   }
 
   <div style="text-align:center; margin-bottom: 16px;">
-    <label>
-      <input type="checkbox" [(ngModel)]="sortRecentFirst" (change)="toggleSortRecent()"/>
+    <label class="sort-text">
+      <input class="sort-checkbox" type="checkbox" [(ngModel)]="sortRecentFirst" (change)="toggleSortRecent()"/>
       Show recent days first
     </label>
   </div>
@@ -92,9 +89,16 @@
         <p>
           <b>{{formatHourString(day.startTime)}} - {{formatHourString(day.endTime)}}</b>
         </p>
-        <button class="edit-time-btn" (click)="startEditTime(day)">
-          Edit time range
-        </button>
+        <div class="btn-row-container">
+          <button class="edit-time-btn" (click)="startEditTime(day)">
+            Edit time range
+          </button>
+          <button
+            class="delete-day-btn"
+            (click)="deleteDay(day)">
+            Delete Day
+          </button>
+        </div>
       }
 
       @if (day.isEditingTime) {
@@ -106,12 +110,6 @@
           <button class="cancel-btn" (click)="cancelEditTime(day)">Cancel</button>
         </div>
       }
-
-        <button
-          class="delete-day-btn"
-          (click)="deleteDay(day)">
-          Delete Day
-        </button>
 
       <div class="schedule">
         @for (slot of day.slots; track slot.hourLabel) {
@@ -275,7 +273,7 @@
       </p>
     </div>
 
-    <div class="next-prev-buttons">
+    <div class="back-home-row">
         <button class="add-day-btn" [routerLink]="['/home']">Back to Home</button>
     </div>
   </div>

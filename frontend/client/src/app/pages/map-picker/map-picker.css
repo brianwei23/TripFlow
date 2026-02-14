@@ -10,3 +10,29 @@
     gap: 12px;
     justify-content: center;
 }
+
+h2 {
+    margin-bottom: 16px;
+    text-align: center;
+    font-size: 30px;
+}
+
+.confirm-location-btn {
+    background-color: green;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    font-size: 22px;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.cancel-btn {
+    background-color: red;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    font-size: 22px;
+    border-radius: 6px;
+    cursor: pointer;
+}
