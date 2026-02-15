@@ -8,7 +8,11 @@ load_dotenv()
 
 app = Flask(__name__)
 # Allow requests from Angular
-CORS(app)
+CORS(app, resources={
+    r"/api/*": {
+        "origins": ["http://localhost:4200"]
+    }
+})
 
 WEATHER_API_KEY = os.getenv("WEATHER_API_KEY")
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
@@ -178,4 +182,6 @@ def health():
     return "OK", 200
 
 if __name__ == "__main__":
-    app.run()
+    import os
+    port = int(os.environ.get("POST", 5000))
+    app.run(host="0.0.0.0", port=port)
