@@ -7,6 +7,7 @@ import { CommonModule } from '@angular/common';
 import { Firestore } from '@angular/fire/firestore';
 import { collection, doc, getDoc, getDocs, setDoc, deleteDoc } from 'firebase/firestore';
 import { WeatherComponent } from '../weather/weather';
+import { environment } from '../../../environments/environment';
 
 interface HourSlot {
   hourLabel: string;
@@ -703,7 +704,7 @@ export class HomeComponent {
 
     try {
       const res = await fetch(
-        `http://localhost:5000/api/weather?lat=${coords.lat}&lng=${coords.lng}&date=${day.date}`
+        `${environment.backendUrl}/api/weather?lat=${coords.lat}&lng=${coords.lng}&date=${day.date}`
       );
 
       if (!res.ok) {

@@ -1,5 +1,6 @@
 export const environment = {
   production: false,
+  backendUrl: "https://tripflow-backend-y39l.onrender.com/",
   firebase: {
     apiKey: "AIzaSyD2HKHMnQOx5MwYg-IC-MCBm27AU0TOTKo",
     authDomain: "tripflow-app-d3e2c.firebaseapp.com",
