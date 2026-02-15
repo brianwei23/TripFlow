@@ -4,7 +4,10 @@ import os
 from dotenv import load_dotenv
 from flask_cors import CORS
 
-load_dotenv()
+if os.path.exists(".env"):
+    load_dotenv()
+
+print("Starting Flask app...")
 
 app = Flask(__name__)
 # Allow requests from Angular
@@ -186,3 +189,7 @@ def autofill_day():
 @app.route("/health")
 def health():
     return "OK", 200
+
+@app.route("/")
+def home():
+    return "TripFlow backend is running", 200
