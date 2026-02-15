@@ -12,8 +12,8 @@ CORS(app, resources={
     r"/api/*": {
         "origins": [
             "http://localhost:4200",
-            "tripflow-app-d3e2c.web.app",
-            "tripflow-app-d3e2c.firebaseapp.com"
+            "https://tripflow-app-d3e2c.web.app",
+            "https://tripflow-app-d3e2c.firebaseapp.com"
         ],
         "methods": ["GET", "POST", "OPTIONS"],
         "allow_headers": ["Content-Type"]
@@ -186,8 +186,3 @@ def autofill_day():
 @app.route("/health")
 def health():
     return "OK", 200
-
-if __name__ == "__main__":
-    import os
-    port = int(os.environ.get("POST", 5000))
-    app.run(host="0.0.0.0", port=port)
