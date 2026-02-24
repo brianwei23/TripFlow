@@ -7,21 +7,6 @@
     <input type="date" [(ngModel)]="selectedDate" />
     <button class="add-day-btn" (click)="addDay()">+ Add New Day</button>
   </div>
-  
-  @if (showTimePicker) {
-    <div class="time-picker">
-      <h3>Select Time Range for {{selectedDate}}</h3>
-      <label class="time-select">
-         Start time:
-         <input type="time" [(ngModel)]="tempStartTime">
-         End time:
-         <input type="time" [(ngModel)]="tempEndTime">
-      </label>
-      <div class="confirm-row">
-        <button class="confirm-time-btn" type="button" (click)="confirmTimeRange()">Confirm</button>
-      </div>
-    </div>
-  }
 
   <div style="text-align:center; margin-bottom: 16px;">
     <label class="sort-text">
@@ -34,7 +19,6 @@
     @for (day of days; track day.date) {
       <div class="day-tile" (click)="goToDay(day.date)">
         <h3>{{day.date}}</h3>
-        <p>{{ formatHourString(day.startTime) }} - {{ formatHourString(day.endTime) }}</p>
       </div>
     }
     @if (days.length === 0) {
@@ -85,154 +69,69 @@
           <span>AI is planning your trip...</span>
         </div>
       }
-      @if (!day.isEditingTime) {
-        <p>
-          <b>{{formatHourString(day.startTime)}} - {{formatHourString(day.endTime)}}</b>
-        </p>
-        <div class="btn-row-container">
-          <button class="edit-time-btn" (click)="startEditTime(day)">
-            Edit time range
-          </button>
-          <button
-            class="delete-day-btn"
-            (click)="deleteDay(day)">
-            Delete Day
-          </button>
+   <div class="btn-row-container">
+    <button class="delete-day-btn" (click)="deleteDay(day)">Delete Day</button>
+   </div>
+
+      <div class="add-activity-wrapper">
+        <button class="add-activity-btn" *ngIf="!day.isEditingNew" (click)="toggleAddForm(day)">
+          + Add Activity
+        </button>
+      </div>
+
+      @if (day.isEditingNew) {
+        <div class="activity-form" style="margin: 0 auto;">
+          <input type="text" placeholder="Activity" [(ngModel)]="day.tempActivity!.name" />
+          <input type="text" placeholder="Location" [(ngModel)]="day.tempActivity!.location" />
+          <button type="button" class="map-btn" (click)="openMapForNewActivity(day)">Pick Location (Map)</button>
+          <input type="time" [(ngModel)]="day.tempActivity!.start" />
+          <input type="time" [(ngModel)]="day.tempActivity!.end" />
+          <input type="number" placeholder="Expected cost" [(ngModel)]="day.tempActivity!.expectedCost" />
+          <input type="number" placeholder="Actual cost" [(ngModel)]="day.tempActivity!.actualCost" />
+
+          <button class="save-btn" (click)="saveActivity(day)">Save</button>
+          <button type="button" class="cancel-btn" (click)="cancelAddActivity(day)">Cancel</button>
         </div>
       }
 
-      @if (day.isEditingTime) {
-        <div class="time-edit-row">
-          <input type="time" [(ngModel)]="day.tempStartTime">
-          <input type="time" [(ngModel)]="day.tempEndTime">
-
-          <button class="save-btn" (click)="saveTimeRange(day)">Save</button>
-          <button class="cancel-btn" (click)="cancelEditTime(day)">Cancel</button>
-        </div>
-      }
-
-      <div class="schedule">
-        @for (slot of day.slots; track slot.hourLabel) {
-          <div class="hour-row">
-            <div class="hour-label">
-              {{ slot.hourLabel }}
-            </div>
-
-            <div class="activities-column">
-              @for (act of slot.activities; track act.id) {
-                <div class="activity-summary">
-                  @if (!act.isEditing) {
-                    <strong>{{ act.name }}</strong><br />
-                    @if (act.location) {
-                      <div class="activity-location">
-                        <b>Location:</b> {{act.location}}
-                      </div>
-                    }
-                    <div class="activity-time">
-                      <b>Time:</b> {{ formatHourString(act.start!) }} - {{ formatHourString(act.end!) }}<br />
-                    </div>
-                    <div class="activity-cost">  
-                      <b>Expected cost: </b>${{ act.expectedCost }}
-                      @if (act.actualCost !== null && act.actualCost !== undefined) {
-                        <b>Actual cost: </b>${{act.actualCost}}
-                      }
-                    </div>
-
-                    <button class="weather-btn" (click)="openWeather(day, act.coords)">
-                      ☀️ Weather
-                    </button>
-
-                    <button class="edit-btn" (click)="editActivity(act)">
-                      Edit
-                    </button>
-
-                    <button
-                      class="delete-btn"
-                      (click)="deleteActivity(day, slot, act)">
-                      Delete
-                    </button>
+      <div class="activities-column" style="margin-top: 20px;">
+        @for (act of day.activities; track act.id) {
+          <div class="activity-summary">
+              @if (!act.isEditing) {
+                <strong>{{act.name}}</strong>
+                <span class="activity-time"> <b>Time:</b> {{formatTime(act.start)}} - {{formatTime(act.end)}}</span>
+                @if (act.location) {
+                  <span class="activity-location"> <b>Location:</b> {{act.location}}</span>
+                }
+                <span class="activity-cost">
+                  <b>Expected cost:</b> ${{act.expectedCost | number:'1.2-2'}}
+                  @if (act.actualCost !== null && act.actualCost !== undefined) {
+                    <b>Actual Cost:</b> ${{act.actualCost}}
                   }
-                  @if (act.isEditing) {
-                    <input
-                      type="text"
-                      [(ngModel)]="act.temp!.name"
-                      placeHolder="Activity name"
-                    />
-
-                    <input type="text" [(ngModel)]="act.temp!.location" placeholder="Location"/>
-
-                    <button type="button" class="map-btn" (click)="openMapForActivity(act)">Pick Location (Map)</button>
-                    
-                    <input type="time" [(ngModel)]="act.temp!.start" />
-                    <input type="time" [(ngModel)]="act.temp!.end" />
-
-                    <input
-                      type="number"
-                      [(ngModel)]="act.temp!.expectedCost"
-                      placeholder="Expected cost"
-                    />
-
-                    <input type="number" [(ngModel)]="act.temp!.actualCost" placeholder="Actual cost"/>
-
-                    <button class="save-btn" (click)="saveEditedActivity(day, slot, act)">
-                      Save
-                    </button>
-
-                    <button class="cancel-btn" (click)="cancelEditActivity(act)">
-                      Cancel
-                    </button>
-                  } 
+                </span>
+                <button class="weather-btn" (click)="openWeather(day, act.coords)">
+                  ☀️ Weather
+                </button>
+                <div>
+                  <button class="edit-btn" (click)="editActivity(act)">Edit</button>
+                  <button class="delete-btn" (click)="deleteActivity(day, act)">Delete</button>
                 </div>
               }
-            </div>
-
-            @if (slot.isEditing) {
-              <div class="activity-form">
-                <input
-                  type="text"
-                  placeholder="Activity"
-                  [(ngModel)]="slot.tempActivity.name"
-                />
-
-                <input type="text" placeholder="Location" [(ngModel)]="slot.tempActivity.location"/>
-                <button type="button" class="map-btn" (click)="openMapForNewActivity(slot)">Pick Location (Map)</button>
-
-                <input
-                  type="time"
-                  [(ngModel)]="slot.tempActivity.start"
-                />
-
-                <input
-                  type="time"
-                  [(ngModel)]="slot.tempActivity.end"
-                />
-
-                <input
-                  type="number"
-                  placeholder="Expected cost"
-                  [(ngModel)]="slot.tempActivity.expectedCost"
-                />
-
-                <input type="number" placeholder="Actual cost" [(ngModel)]="slot.tempActivity.actualCost"/>
-
-                <button class="save-btn" (click)="saveActivity(day, slot)">
-                  Save
-                </button>
-
-                <button type="button" class="cancel-btn" (click)="cancelAddActivity(slot)">
-                  Cancel
-                </button>
-              </div>
-            }
-
-            <!-- Adds more activities -->
-            <div class="add-activity-wrapper"> 
-              <button class="add-activity-btn" *ngIf="!slot.isEditing" (click)="toggleAddForm(slot)">
-                + Add Activity
-              </button> 
-            </div>
-            </div>
-          }
+              @if (act.isEditing) {
+                <input type="text" [(ngModel)]="act.temp!.name" placeholder="Activity" />
+                <input type="text" [(ngModel)]="act.temp!.location" placeholder="Location" />
+                <button type="button" class="map-btn" (click)="openMapForActivity(act)">Pick Location (Map)</button>
+                <input type="time" [(ngModel)]="act.temp!.start" />
+                <input type="time" [(ngModel)]="act.temp!.end" />
+                <input type="number" [(ngModel)]="act.temp!.expectedCost" placeholder="Expected cost" />
+                <input type="number" [(ngModel)]="act.temp!.actualCost" placeholder="Actual cost" />
+                <div>
+                  <button class="save-btn" (click)="saveEditedActivity(day, act)">Save</button>
+                  <button class="cancel-btn" (click)="cancelEditActivity(act)">Cancel</button>
+                </div>
+              }
+          </div>
+        }
       </div>
     </div>
   }

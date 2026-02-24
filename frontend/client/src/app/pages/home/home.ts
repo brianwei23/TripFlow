@@ -9,18 +9,6 @@ import { collection, doc, getDoc, getDocs, setDoc, deleteDoc } from 'firebase/fi
 import { WeatherComponent } from '../weather/weather';
 import { environment } from '../../../environments/environment';
 
-interface HourSlot {
-  hourLabel: string;
-  activities: Activity[];
-  tempActivity: Activity;
-  isEditing: boolean;
-}
-
-interface PersistedHourSlot {
-  hourLabel: string;
-  activities: Activity[];
-}
-
 interface Activity {
   name: string;
   id?: string; // For activities with duplicate names
@@ -40,21 +28,16 @@ interface Activity {
 
 interface DayPlan {
   date: string;
-  startTime: string;
-  endTime: string;
-  slots: HourSlot[];
-  isEditingTime?: boolean;
-  tempStartTime?: string;
-  tempEndTime?: string;
+  activities: Activity[];
+  tempActivity?: Activity;
+  isEditingNew?: boolean;
   aiAnalysisResult?: string;
   aiHasAnalyzed?: boolean;
 }
 
 interface PersistedDayPlan {
   date: string;
-  startTime: string;
-  endTime: string;
-  slots: PersistedHourSlot[];
+  activities: Activity[];
 }
 
 @Component({
@@ -73,9 +56,6 @@ export class HomeComponent {
 
   private firestore = inject(Firestore);
 
-  showTimePicker = false;
-  tempStartTime = '';
-  tempEndTime = '';
   // Date tiles sort
   sortRecentFirst: boolean = false;
 
@@ -117,25 +97,21 @@ export class HomeComponent {
           this.days = [navState.preloadedDay];
           this.currentDayIndex = 0;
           this.firstDayAdded = true;
-          this.showTimePicker = false;
         } else {
           const dayFromDb = await this.loadDayFromFirebase(dateParam);
           if (dayFromDb) {
             this.days = [dayFromDb];
             this.currentDayIndex = 0;
             this.firstDayAdded = true;
-            this.showTimePicker = false;
           } else {
             this.days = [];
             this.firstDayAdded = false;
-            this.showTimePicker = true;
         }
       }
 
         if (navState?.editingActivity) {
           const editingAct = this.days
-            .flatMap(d => d.slots)
-            .flatMap(s => s.activities)
+            .flatMap(d => d.activities)
             .find(a => a.id === navState.editingActivity?.id);
           if (editingAct) {
             editingAct.isEditing = true;
@@ -151,16 +127,17 @@ export class HomeComponent {
             if (navState.pickedCoords) editingAct.temp!.coords = navState.pickedCoords;
           }
         }
-        if (navState?.isNewActivity && navState.slotHourLabel && this.days.length) {
-          const slot = this.days[0].slots.find(
-            s => s.hourLabel === navState.slotHourLabel
-          );
-          if (slot) {
-            if (navState.tempActivity) slot.tempActivity = { ...navState.tempActivity };
-            if (navState.pickedLocation) slot.tempActivity.location = navState.pickedLocation;
-            if (navState.pickedCoords) slot.tempActivity.coords = navState.pickedCoords;
-            slot.isEditing = true;
+        if (navState?.isNewActivity && this.days.length) {
+          const day = this.days[0];
+          day.isEditingNew = true;
+
+          if (!day.tempActivity) {
+            day.tempActivity = { name: '', start: '', end: '', expectedCost: undefined, actualCost: null };
           }
+
+          if (navState.tempActivity) day.tempActivity = { ...day.tempActivity, ...navState.tempActivity };
+          if (navState.pickedLocation) day.tempActivity!.location = navState.pickedLocation;
+          if (navState.pickedCoords) day.tempActivity!.coords = navState.pickedCoords;
         }
         const currentNav = this.router.currentNavigation();
         if (currentNav && currentNav.extras) {
@@ -171,7 +148,6 @@ export class HomeComponent {
         this.isHomePage = true;
         this.days = [];
         await this.loadAllDays();
-        this.showTimePicker = false;
       }  
       this.cdr.detectChanges(); // Force UI refresh after any route change/data load
       });
@@ -184,20 +160,15 @@ export class HomeComponent {
 
     const sanitizedDay: PersistedDayPlan = {
       date: day.date,
-      startTime: day.startTime,
-      endTime: day.endTime,
-      slots: day.slots.map(slot => ({
-        hourLabel: slot.hourLabel,
-        activities: slot.activities.map(act => ({
-          name: act.name,
-          id: act.id,
-          start: act.start,
-          end: act.end,
-          expectedCost: act.expectedCost,
-          location: act.location || '',
-          coords: act.coords || null,
-          actualCost: act.actualCost !== undefined ? act.actualCost : null
-        }))
+      activities: day.activities.map(act => ({
+        name: act.name,
+        id: act.id,
+        start: act.start,
+        end: act.end,
+        expectedCost: act.expectedCost,
+        location: act.location || '',
+        coords: act.coords || null,
+        actualCost: act.actualCost !== undefined ? act.actualCost : null
       }))
     };
     const docRef = doc(this.firestore, 'users', uid, 'days', day.date);
@@ -217,14 +188,9 @@ export class HomeComponent {
     const data = docSnap.data() as PersistedDayPlan;
     return {
       date: data.date,
-      startTime: data.startTime,
-      endTime: data.endTime,
-      slots: data.slots.map(slot => ({
-        ...slot,
-        isEditing: false,
-        tempActivity: {name: '', start: '', end: '', expectedCost: undefined, actualCost: null},
-        activities: slot.activities ?? []
-      }))  
+      activities: data.activities ?? [],
+      tempActivity: {name: '', start: '', end: '', expectedCost: undefined, actualCost: null},
+      isEditingNew: false,
     };
   }
 
@@ -254,85 +220,6 @@ export class HomeComponent {
   }
 
 
-  startEditTime(day: DayPlan) {
-    day.isEditingTime = true;
-    day.tempStartTime = day.startTime;
-    day.tempEndTime = day.endTime;
-    this.cdr.detectChanges();
-  }
-
-
-  cancelEditTime(day: DayPlan) {
-    day.isEditingTime = false;
-    this.cdr.detectChanges();
-  }
-
-
-  async saveTimeRange(day: DayPlan) {
-    if (!day.tempStartTime || !day.tempEndTime) {
-      alert('Both times are required.');
-      return;
-    }
-
-
-    if (day.tempStartTime >= day.tempEndTime) {
-      alert('Start time must be before end time.');
-      return;
-    }
-
-
-    const userConfirmed = confirm(
-      'EDITING THE TIME RANGE CAN DELETE ALL YOUR ACTIVITIES.'
-    );
-
-
-    if (!userConfirmed) {
-      return;
-    }
-
-
-    const newSlots = this.generateHourSlots(
-      day.tempStartTime,
-      day.tempEndTime
-    );
-
-
-    // Preserve actvities that still fit
-    for (const oldSlot of day.slots) {
-      for (const act of oldSlot.activities) {
-        if(!act.start || !act.end) continue;
-
-
-        const fits = newSlots.find(s => {
-          const [sStart, sEnd] = s.hourLabel.split(' - ');
-          const start24 = this.parseHourLabelTo24(sStart);
-          const end24 = this.parseHourLabelTo24(sEnd);
-          return act.start! >= start24 && act.start! < end24;
-        });
-        if (fits) {
-          fits.activities.push(act);
-        }
-      }
-    }
-
-    // Sort activities inside each slot by start time
-    newSlots.forEach(s => s.activities.sort((a, b) => a.start!.localeCompare(b.start!)));
-
-
-    day.startTime = day.tempStartTime;
-    day.endTime = day.tempEndTime;
-    day.slots = newSlots;
-
-    this.invalidateAIAnalysis(day);
-
-    day.isEditingTime = false;
-
-
-    await this.saveDayToFirebase(day);
-    this.cdr.detectChanges();
-  }
-
-
   editActivity(act: Activity) {
     act.isEditing = true;
     act.temp = {
@@ -354,14 +241,14 @@ export class HomeComponent {
   }
 
 
-  saveEditedActivity(day: DayPlan, slot: HourSlot, act: Activity) {
+  saveEditedActivity(day: DayPlan, act: Activity) {
     const temp = act.temp;
     if (!temp) return;
     if (!temp.name || !temp.start || !temp.end || temp.expectedCost == undefined || temp.expectedCost == null) {
       alert('Activity name, times, and expected cost must be filled.');
       return;
     }
-    if (temp.expectedCost < 0) {
+    if (temp.expectedCost < 0 || (temp.actualCost != null && temp.actualCost < 0)) {
       alert('Cost cannot be less than 0.')
       return;
     }
@@ -369,18 +256,6 @@ export class HomeComponent {
       alert('Start time must be before end time');
       return;
     }  
-
-
-    const [slotStartStr, slotEndStr] = slot.hourLabel.split(' - ');
-    const slotStart = this.parseHourLabelTo24(slotStartStr);
-    const slotEnd = this.parseHourLabelTo24(slotEndStr);
-
-
-    if (temp.start < slotStart || temp.start > slotEnd) {
-      alert(`Activity start time must be with the hour slot.`);
-      return;
-    }
-
 
     act.name = temp.name;
     act.start = temp.start;
@@ -390,92 +265,44 @@ export class HomeComponent {
     act.coords = temp.coords ?? null;
     act.actualCost = temp.actualCost;
 
+    day.activities.sort((a, b) => (a.start || "").localeCompare(b.start || ""));
+
     this.invalidateAIAnalysis(day); 
 
     act.isEditing = false;
     act.temp = undefined;
 
-
     this.saveDayToFirebase(day);
     this.cdr.detectChanges();
   }
 
-
-  // Time format
-  public formatHourString(time24: string): string {
-    if (!time24) return '';
-    const [hourStr, minute] = time24.split(':');
-    let hour = parseInt(hourStr, 10);
-    const period = hour >= 12 ? 'PM' : 'AM';
-    hour = hour % 12 === 0 ? 12 : hour % 12;
-    return `${hour}:${minute} ${period}`;
-  }
-
-
-  private parseHourLabelTo24(label: string): string {
-    const [time, period] = label.split(' ');
-    let [hour, minute] = time.split(':').map(Number);
-    if (period === 'PM' && hour < 12) hour += 12;
-    if (period === 'AM' && hour === 12) hour = 0;
-    return `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2,'0')}`;
-  }
-
-
-  private generateHourSlots(start: string, end: string): HourSlot[] {
-    const slots: HourSlot[] = [];
-    let[currentHour, currentMin] = start.split(':').map(Number);
-    const [endHour, endMin] = end.split(':').map(Number);
-
-
-    while (currentHour < endHour || (currentHour === endHour && currentMin < endMin)) {
-      // Calculate next hour mark
-      let nextHour = currentHour + 1;
-      let nextMin = currentMin;
-     
-      if (nextHour > endHour || (nextHour === endHour && nextMin > endMin)) {
-        nextHour = endHour;
-        nextMin = endMin;
-      }
-      const label = `${this.formatHourString(`${String(currentHour).padStart(2, '0')}:${String(currentMin).padStart(2, '0')}`)} - ${this.formatHourString(`${String(nextHour).padStart(2, '0')}:${String(nextMin).padStart(2, '0')}`)}`;
-      slots.push({
-        hourLabel: label,
-        isEditing: false,
-        activities: [],
-        tempActivity: {name: '', start: '', end: '', expectedCost: 0}
-      });
-      currentHour = nextHour;
-      currentMin = nextMin;
-    }
-    return slots;
-  }
-
-
-  addDay() {
+  async addDay() {
     // Display time picker after date is selected
     if (!this.selectedDate) {
       alert('Please select a date first.');
       return;
     }
-    this.showTimePicker = true;
-  }
 
-
-  addNewDay(direction: 'next'| 'prev') {
-    if (direction === 'next') {
-      const lastDay = this.days.length ? new Date(this.days[this.days.length - 1].date) : new Date();
-      lastDay.setDate(lastDay.getDate() + 1);
-      this.selectedDate = lastDay.toISOString().split('T')[0];
-    } else {
-      const firstDay = this.days.length ? new Date(this.days[0].date) : new Date();
-      firstDay.setDate(firstDay.getDate() - 1);
-      this.selectedDate = firstDay.toISOString().split('T')[0];
+    const existing = this.days.find(d => d.date === this.selectedDate);
+    if (existing) {
+      this.router.navigate(['/day', this.selectedDate]);
+      return;
     }
-    this.showTimePicker = true;
+
+    const newDay: DayPlan = {
+      date: this.selectedDate,
+      activities: [],
+      tempActivity: { name: '', start: '', end: '', expectedCost: undefined, actualCost: null },
+      isEditingNew: false,
+    };
+
+    await this.saveDayToFirebase(newDay);
+    this.router.navigate(['/day', this.selectedDate]);
   }
 
 
-  saveActivity(day: DayPlan, slot: HourSlot) {
-    const act = slot.tempActivity;
+  saveActivity(day: DayPlan) {
+    const act = day.tempActivity;
 
     if (!act || !act.name) return;
 
@@ -492,18 +319,8 @@ export class HomeComponent {
     }
 
 
-    if (act.expectedCost === undefined || act.expectedCost === null || act.expectedCost < 0) {
+    if (act.expectedCost === undefined || act.expectedCost === null || act.expectedCost < 0 || (act.actualCost != null && act.actualCost < 0)) {
       alert('Please enter a valid expected cost.');
-      return;
-    }
-
-    const [slotStartStr, slotEndStr] = slot.hourLabel.split(' - ');
-
-    const slotStart = this.parseHourLabelTo24(slotStartStr);
-    const slotEnd = this.parseHourLabelTo24(slotEndStr);
-
-    if (act.start < slotStart || act.start > slotEnd) {
-      alert(`Start time must be within the slot time range: ${slot.hourLabel}`);
       return;
     }
 
@@ -512,62 +329,20 @@ export class HomeComponent {
       id: act.id || Date.now().toString() + Math.random().toString(36).slice(2, 11)
     };
 
-    slot.activities.push(finalActivity);
+    day.activities.push(finalActivity);
 
+    // Sort by earliest start time
+    day.activities.sort((a, b) => (a.start || "").localeCompare(b.start || ""));
     this.invalidateAIAnalysis(day);
 
-    // Sort the activities by start time
-    slot.activities.sort((a, b) => {
-      if (!a.start) return 1;
-      if (!b.start) return -1;
-      return a.start.localeCompare(b.start);
-    });
+    // Resetting form
+    day.tempActivity = {name: '', start: '', end: '', expectedCost: undefined, actualCost: null};
+    day.isEditingNew = false;
+    
 
-    slot.tempActivity = { name: '', start: '', end: '', expectedCost: undefined, actualCost: null };
-    slot.isEditing = false;
-    window.history.replaceState({}, '');
     this.saveDayToFirebase(day);
     // Force Angular to see changes
     this.cdr.detectChanges();
-  }
-
-
-  async confirmTimeRange() {
-    if(!this.selectedDate) {
-      alert('Please select a date first.');
-      return;
-    }
-    if (!this.tempStartTime || !this.tempEndTime) {
-      alert('You must select both start and end times.');
-      return;
-    }
-    if (this.tempStartTime >= this.tempEndTime) {
-      alert('Start time needs to be before the end time.');
-      return;
-    }
-
-
-    // Stop duplicate dates
-    const existingDay = this.days.find(d => d.date === this.selectedDate);
-    if (existingDay) {
-      alert('This date already exsits.');
-      return;
-    }
-   
-    const newDay: DayPlan = {
-      date: this.selectedDate,
-      startTime: this.tempStartTime,
-      endTime: this.tempEndTime,
-      slots: this.generateHourSlots(this.tempStartTime, this.tempEndTime)
-    };
-
-
-    await this.saveDayToFirebase(newDay);
-
-
-    this.router.navigate(['/day', this.selectedDate], {
-      state: {preloadedDay: newDay}
-    });
   }
 
 
@@ -593,21 +368,14 @@ export class HomeComponent {
       const data = doc.data() as PersistedDayPlan;
       return {
         date: data.date,
-        startTime: data.startTime,
-        endTime: data.endTime,
-        slots: data.slots.map(slot => ({
-          hourLabel: slot.hourLabel,
-          activities: slot.activities ?? [],
-          isEditing: false,
-          tempActivity: { name: '', start: '', end: '', expectedCost: undefined, actualCost: null }
-        }))
+        activities: data.activities ?? [],
+        isEditing: false,
+        tempActivity: { name: '', start: '', end: '', expectedCost: undefined, actualCost: null }
       } as DayPlan;
     })
     .sort((a, b) => a.date.localeCompare(b.date));
 
-
    this.firstDayAdded = this.days.length > 0;
-
 
    console.log('Days loaded for homepage:', this.days.length);
    this.cdr.detectChanges();
@@ -629,33 +397,26 @@ export class HomeComponent {
     });
   }
 
-  openMapForNewActivity(slot: HourSlot) {
+  openMapForNewActivity(day: DayPlan) {
     this.router.navigate(['/map-picker'], {
       state: {
         date: this.selectedDate,
         isNewActivity: true,
-        slotHourLabel: slot.hourLabel,
-        tempActivity: slot.tempActivity
+        tempActivity: day.tempActivity
       }
     });
   }
 
-  toggleAddForm(slot: HourSlot) {
-    this.days[0]?.slots.forEach(s => s.isEditing = false);
-    slot.isEditing = true;
+  toggleAddForm(day: DayPlan) {
+    day.isEditingNew = true;
+    if (!day.tempActivity) {
+      day.tempActivity = {name: '', start: '', end: '', expectedCost: undefined, actualCost: null};
+    }
     this.cdr.detectChanges();
   }
 
-  cancelAddActivity(slot: HourSlot) {
-    slot.isEditing = false;
-    slot.tempActivity = {
-      name: '',
-      start: '',
-      end: '',
-      expectedCost: undefined,
-      actualCost: null,
-      location: ''
-    };
+  cancelAddActivity(day: DayPlan) {
+    day.isEditingNew = false;
     this.cdr.detectChanges();
   }
 
@@ -667,11 +428,11 @@ export class HomeComponent {
   }
 
 
-  deleteActivity(day: DayPlan, slot: HourSlot, act: Activity) {
+  deleteActivity(day: DayPlan, act: Activity) {
     const confirmDelete = confirm(`Delete activity "${act.name}"?`);
     if (!confirmDelete) return;
 
-    slot.activities = slot.activities.filter(a => a !== act);
+    day.activities = day.activities.filter(a => a !== act);
     this.invalidateAIAnalysis(day);
     window.history.replaceState({}, '');
     this.saveDayToFirebase(day);
@@ -744,7 +505,7 @@ export class HomeComponent {
   }
 
   private getAllActivities(day: DayPlan): Activity[] {
-    return day.slots.flatMap(slot => slot.activities);
+    return day.activities || [];
   }
 
   getExpectedTotalCost(day: DayPlan): number {
@@ -775,11 +536,20 @@ export class HomeComponent {
   }
 
   getTotalScheduledHours(day: DayPlan): number {
-    const start = this.parseTimeToMinutes(day.startTime);
-    const end = this.parseTimeToMinutes(day.endTime);
+    const activities = this.getAllActivities(day);
+    if (!activities || activities.length === 0) return 0;
 
-    if (end <= start) return 0;
-    return (end - start) / 60;
+    let totalMinutes = 0;
+    for (const act of activities) {
+      if (act.start && act.end) {
+        const start = this.parseTimeToMinutes(act.start);
+        const end = this.parseTimeToMinutes(act.end);
+        if (end > start) {
+          totalMinutes += (end - start);
+        }
+      }
+    }
+    return totalMinutes / 60;
   }
 
   getActualCostDensity(day: DayPlan): number {
@@ -803,6 +573,14 @@ export class HomeComponent {
     return h * 60 + m;
   }
 
+  formatTime(time: string | undefined): string {
+    if (!time) return '';
+    const [h, m] = time.split(':').map(Number);
+    const period = h >= 12 ? 'PM' : 'AM';
+    const hour = h % 12 || 12;
+    return `${hour}:${m.toString().padStart(2, '0')} ${period}`;
+  }
+
   async analyzeCurrentDay(day: DayPlan) {
     if (day.aiHasAnalyzed && day.aiAnalysisResult) {
       this.aiAnalysisResult = day.aiAnalysisResult;
@@ -821,8 +599,6 @@ export class HomeComponent {
 
     const payload = {
       date: day.date,
-      startTime: day.startTime,
-      endTime: day.endTime,
       activities: this.getAllActivities(day),
       metrics: {
         expectedTotal: this.getExpectedTotalCost(day),
@@ -863,20 +639,32 @@ export class HomeComponent {
 
   getEmptyTimeSlots(day: DayPlan) {
     const activities = this.getAllActivities(day)
-      .sort((a, b) => (a.start || "").localeCompare(b.start || ""));
+      .filter(a => a.start && a.end)
+      .sort((a, b) => a.start!.localeCompare(b.start!));
 
     const gaps: { start: string; end: string } [] = [];
 
-    let current = day.startTime;
+    let current = "00:00";
+    const endOfDay = "23:59";
 
     for (const act of activities) {
+      
+      if (act.start! < current && act.end! > current) {
+        current = act.end!;
+        continue;
+      }
+
       if (act.start! > current) {
         gaps.push({ start: current, end: act.start! });
       }
-      current = act.end!;
+
+      if (act.end! > current) {
+        current = act.end!;
+      }
     }
-    if (current < day.endTime) {
-      gaps.push({ start: current, end: day.endTime });
+
+    if (current < endOfDay) {
+      gaps.push({ start: current, end: endOfDay });
     }
     return gaps;
   }
@@ -894,8 +682,8 @@ export class HomeComponent {
     const payload = {
       existingActivities: this.getAllActivities(day),
       emptySlots,
-      dayStart: day.startTime,
-      dayEnd: day.endTime
+      dayStart: "00:00",
+      dayEnd: "23:59"
     };
 
     try {
@@ -943,23 +731,7 @@ export class HomeComponent {
       console.log(`Skipping duplicate AI activity: ${aiActivity.name}`);
       return;
     }
-
-    const aiStartMins = this.parseTimeToMinutes(aiActivity.start);
-
-    const slot = day.slots.find(s => {
-      const slotStartStr = s.hourLabel.split(' - ')[0];
-      const slotStartMins = this.parseLabelToMinutes(slotStartStr);
-      const slotEndMins = slotStartMins + 60;
-      return aiStartMins >= slotStartMins && aiStartMins < slotEndMins;
-    });
-
-    if (!slot) { 
-      console.warn('Could not find slot for:', aiActivity.start);
-      const lastSlot = day.slots[day.slots.length - 1];
-      if (lastSlot) this.pushAndSortActivity(lastSlot, aiActivity);
-      return;
-    }
-    this.pushAndSortActivity(slot, aiActivity);
+    this.pushAndSortActivity(day, aiActivity);
   }
 
   private invalidateAIAnalysis(day: DayPlan) {
@@ -967,10 +739,10 @@ export class HomeComponent {
     day.aiAnalysisResult = '';
   }
 
-  private pushAndSortActivity(slot: HourSlot, aiActivity: any) {
+  private pushAndSortActivity(day: DayPlan, aiActivity: any) {
     const newId = Date.now().toString() + Math.random().toString(36).slice(2, 11);
 
-    slot.activities.push({
+    day.activities.push({
       id: newId,
       name: aiActivity.name,
       location: aiActivity.location || '',
@@ -981,7 +753,7 @@ export class HomeComponent {
       isEditing: false,
       source: 'ai'
     });
-    slot.activities.sort((a, b) => (a.start || "").localeCompare(b.start || ""));
+    day.activities.sort((a, b) => (a.start || "").localeCompare(b.start || ""));
     this.cdr.detectChanges();
   }
 
