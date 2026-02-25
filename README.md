@@ -6,6 +6,8 @@ To use **TripFlow** please enter https://tripflow-app-d3e2c.web.app/login. Then 
 
 Once you log in, you can create a day and set up a time range. For each hour slot, you can add/edit an activity. Each activity contains a weather button which takes coordinates from the map. This feature only works if you select the location from the map. AI analyis and autofill buttons are at the top of the schedule page.
 
+**The AI and Weather APIs rely on Render, and if Render has been inactive for some time, then it will take up to a few minutes for Render to "wake up". This causes the first AI/Weather API call after user inactivity to take up to a few minutes.**
+
 If the site is not live at the time that you see this or if you have any questions, then please view this video demonstration here: https://www.youtube.com/watch?v=8xslyBeis7I
 
 ## Features
