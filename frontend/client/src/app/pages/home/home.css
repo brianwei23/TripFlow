@@ -615,3 +615,14 @@ h3 {
 }
 
 .back-btn:hover { background: #757575; }
+
+.trip-date-range {
+    font-size: 1.1rem;
+    color: #555;
+    margin: 4px 0 0;
+}
+
+.trip-date-range--empty {
+    color: #aaa;
+    font-style: italic;
+}

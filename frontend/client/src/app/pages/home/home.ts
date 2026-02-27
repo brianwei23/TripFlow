@@ -12,6 +12,7 @@ import { environment } from '../../../environments/environment';
 interface Trip {
   id: string;
   name: string;
+  dateRange?: { start: string; end: string } | null;
 }
 
 interface Activity {
@@ -63,6 +64,8 @@ export class HomeComponent {
 
   // Date tiles sort
   sortRecentFirst: boolean = false;
+
+  sortTripsOldestFirst: boolean = false;
 
   currentDayIndex: number = -1;
 
@@ -213,7 +216,33 @@ export class HomeComponent {
     if (!uid) return;
     const tripsCol = collection(this.firestore, 'users', uid, 'trips');
     const snapshot = await getDocs(tripsCol);
-    this.trips = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Trip));
+    const trips: Trip[] = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Trip));
+
+    await Promise.all(trips.map(async (trip) => {
+      const daysCol = collection(this.firestore, 'users', uid, 'trips', trip.id, 'days');
+      const daysSnap = await getDocs(daysCol);
+      const dates = daysSnap.docs.map(d => d.id).sort();
+      trip.dateRange = dates.length > 0 ? {start: dates[0], end: dates[dates.length - 1]} : null;
+    }));
+    this.trips = trips;
+    this.applyTripsSort();
+    this.cdr.detectChanges();
+  }
+
+  applyTripsSort() {
+    this.trips.sort((a, b) => {
+      const aStart = a.dateRange?.start ?? '';
+      const bStart = b.dateRange?.start ?? '';
+      if (!aStart && !bStart) return 0;
+      if (!aStart) return 1;
+      if (!bStart) return -1;
+      const cmp = bStart.localeCompare(aStart); // latest first (default)
+      return this.sortTripsOldestFirst ? -cmp : cmp;
+    });
+  }
+
+  toggleSortTrips() {
+    this.applyTripsSort();
     this.cdr.detectChanges();
   }
 
@@ -231,10 +260,11 @@ export class HomeComponent {
     }
     try {
       const tripId = Date.now().toString();
-      const newTrip: Trip = { id: tripId, name: this.newTripName.trim() };
+      const newTrip: Trip = { id: tripId, name: this.newTripName.trim(), dateRange: null };
 
       await setDoc(doc(this.firestore, 'users', uid, 'trips', tripId), { name: newTrip.name });
       this.trips.push(newTrip);
+      this.applyTripsSort();
       this.newTripName = '';
       this.showCreateTripForm = false;
       this.cdr.detectChanges();
@@ -252,8 +282,21 @@ export class HomeComponent {
     this.cdr.detectChanges();
   }
 
+  openCreateTripForm() {
+    this.showCreateTripForm = true;
+    this.cdr.detectChanges();
+  }
+
+  closeCreateTripForm() {
+    this.showCreateTripForm = false;
+    this.newTripName = '';
+    this.cdr.detectChanges();
+  }
+
   async backToTrips() {
     this.cdr.reattach();
+    this.showCreateTripForm = false;
+    this.newTripName = '';
     this.viewMode = 'trips';
     this.selectedTrip = null;
     this.days = [];
@@ -930,6 +973,42 @@ export class HomeComponent {
     this.isEditingTripName = false;
     this.cdr.detectChanges();
   }
+
+  async deleteTrip(trip: Trip, event: Event) {
+    event.stopPropagation();
+
+    if (!confirm(`You are about to delete the entire trip, "${trip.name}". This also deletes any associated data like dates and activities. This cannot be reversed.`)) {
+    return;
+  }
+
+  const uid = this.auth.uid;
+  if (!uid) return;
+
+  const tripRef = doc(this.firestore, 'users', uid, 'trips', trip.id);
+  const daysCollectionRef = collection(this.firestore, 'users', uid, 'trips', trip.id, 'days');
+
+  try {
+    const daysSnapshot = await getDocs(daysCollectionRef);
+
+    const deletePromises = daysSnapshot.docs.map(dayDoc => deleteDoc(dayDoc.ref));
+    await Promise.all(deletePromises);
+
+    await deleteDoc(tripRef);
+
+    this.trips = this.trips.filter(t => t.id !== trip.id);
+
+    if (this.selectedTrip?.id === trip.id) {
+      this.backToTrips();
+    } else {
+      this.cdr.detectChanges();
+    }
+
+    alert('Trip and associated data has been deleted.');
+  } catch (error) {
+    console.error("Error deleting trip:", error);
+    alert('Failed to delete trip. Please try again.');
+  }
+}
 
   startEditDayDate(day: DayPlan) {
     this.editDayDateValue = day.date;

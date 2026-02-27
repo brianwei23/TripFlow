@@ -6,7 +6,7 @@
   <div class="trips-header">
     <h2>My Trips</h2>
     @if (!showCreateTripForm) {
-      <button class="add-trip-btn" (click)="showCreateTripForm = true">Create New Trip</button>
+      <button class="add-trip-btn" (click)="openCreateTripForm()">Create New Trip</button>
     }  
   </div>
 
@@ -14,14 +14,26 @@
     <div class="create-trip-form">
       <input type="text" placeholder="Trip Name" [(ngModel)]="newTripName" />
       <button class="save-btn" (click)="createTrip()">Save</button>
-      <button class="cancel-btn" (click)="showCreateTripForm = false">Cancel</button>
+      <button class="cancel-btn" (click)="closeCreateTripForm()">Cancel</button>
     </div>
   }
+
+  <div style="text-align:center; margin-bottom: 16px;">
+    <label class="sort-text">
+      <input class="sort-checkbox" type="checkbox" [(ngModel)]="sortTripsOldestFirst" (change)="toggleSortTrips()" />
+      Show oldest trips first
+    </label>
+  </div>
 
   <div class="days-container">
     @for (trip of trips; track trip.id) {
       <div class="day-tile" (click)="openTrip(trip)">
         <h3>{{trip.name}}</h3>
+        @if (trip.dateRange) {
+          <p class="trip-date-range"><b>{{trip.dateRange.start}} — {{trip.dateRange.end}}</b></p>
+        } @else {
+          <p class="trip-date-range trip-date-range--empty">No dates planned yet.</p>
+        }
       </div>
     }
     @if (trips.length === 0) {
@@ -35,7 +47,14 @@
     <button class="back-btn" (click)="backToTrips()">Back to Trips</button>
     @if (!isEditingTripName) {
       <h2>{{selectedTrip?.name}} - Calendar</h2>
-      <button class="edit-btn" (click)="startEditTripName()">Edit Name</button>
+      <div class="header-actions"> <button class="edit-btn" (click)="startEditTripName()">Edit Name</button>
+        <button
+          class="delete-trip-btn"
+          (click)="deleteTrip(selectedTrip!, $event)"
+          style="background: #ff4d4d; color: white; border: none; border-radius: 4px; padding: 5px 10px; cursor: pointer; margin-left: 8px;">
+          Delete Trip
+        </button>
+      </div>
     } @else {
       <input type="text" [(ngModel)]="editTripNameValue" />
       <button class="save-btn" (click)="saveEditTripName()">Save</button>
@@ -94,7 +113,7 @@
                 <button class="close-btn-x" (click)="closeAIPopup()">X</button>
               </div>
               <div class="ai-popup-body">
-                @if(isAnalyzing) {
+                @if (isAnalyzing) {
                   <div class="loading-state">
                     <div class="spinner"></div>
                     <p>Analyzing your trip...</p>
@@ -169,7 +188,7 @@
                   <button class="delete-btn" (click)="deleteActivity(day, act)">Delete</button>
                 </div>
               }
-              @if (act.isEditing) {
+              @else {
                 <input type="text" [(ngModel)]="act.temp!.name" placeholder="Activity" />
                 <input type="text" [(ngModel)]="act.temp!.location" placeholder="Location" />
                 <button type="button" class="map-btn" (click)="openMapForActivity(act)">Pick Location (Map)</button>
