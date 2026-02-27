@@ -1,4 +1,5 @@
 import { Component, OnInit } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import * as L from 'leaflet';
 import { Router } from '@angular/router';
 
@@ -30,7 +31,7 @@ interface Activity {
 
 @Component({
   selector: 'app-map-picker',
-  imports: [],
+  imports: [FormsModule],
   standalone: true,
   templateUrl: './map-picker.html',
   styleUrl: './map-picker.css',
@@ -43,6 +44,8 @@ export class MapPicker implements OnInit {
   private savedState: any;
   selectedLocationName: string = '';
   selectedLatLng!: L.LatLng;
+
+  searchQuery: string = '';
 
   constructor(private router: Router) {}
 
@@ -83,6 +86,40 @@ export class MapPicker implements OnInit {
       data.name ||
       data.display_name ||
       'Unknown location';
+  }
+
+  async searchLocation() {
+    if (!this.searchQuery.trim()) return;
+
+    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(this.searchQuery)}`;
+
+    try {
+      const response = await fetch(url);
+      const data = await response.json();
+
+      if (data && data.length > 0) {
+        const bestMatch = data[0];
+        const lat = parseFloat(bestMatch.lat);
+        const lon = parseFloat(bestMatch.lon);
+        const latlng = L.latLng(lat, lon);
+
+        // Go to searched location
+        this.map.setView(latlng, 15);
+
+        if (this.marker) {
+          this.marker.setLatLng(latlng);
+        } else {
+          this.marker = L.marker(latlng).addTo(this.map);
+        }
+        this.selectedLatLng = latlng;
+        this.selectedLocationName = bestMatch.display_name || bestMatch.name || this.searchQuery;
+      } else {
+        alert('Location not found.');
+      }
+    } catch (error) {
+      console.error('Search error:', error);
+      alert('Something is wrong with your search. Please try again.');
+    }
   }
 
 
