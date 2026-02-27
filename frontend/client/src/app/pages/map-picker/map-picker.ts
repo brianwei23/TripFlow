@@ -90,7 +90,11 @@ export class MapPicker implements OnInit {
     const lat = this.selectedLatLng?.lat;
     const lng = this.selectedLatLng?.lng;
     this.router.navigate(['/day', this.returnDate], {
+      queryParams: { tripId: this.savedState?.tripId },
       state: {
+        tripId: this.savedState?.tripId,
+        tripName: this.savedState?.tripName,
+
         pickedLocation: this.selectedLocationName,
         pickedCoords: lat !== undefined ? {lat, lng} : null,
 
@@ -104,6 +108,7 @@ export class MapPicker implements OnInit {
 
   cancel() {
     this.router.navigate(['/day', this.returnDate], {
+      queryParams: { tripId: this.savedState?.tripId },
       state: this.savedState
     });
   }

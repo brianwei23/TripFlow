@@ -9,6 +9,11 @@ import { collection, doc, getDoc, getDocs, setDoc, deleteDoc } from 'firebase/fi
 import { WeatherComponent } from '../weather/weather';
 import { environment } from '../../../environments/environment';
 
+interface Trip {
+  id: string;
+  name: string;
+}
+
 interface Activity {
   name: string;
   id?: string; // For activities with duplicate names
@@ -68,7 +73,12 @@ export class HomeComponent {
 
   private aiService = inject(AIService);
 
-  isHomePage: boolean = false;
+  viewMode: 'trips' | 'days' | 'day-detail' = 'trips';
+
+  trips: Trip[] = [];
+  selectedTrip: Trip | null = null;
+  showCreateTripForm = false;
+  newTripName = '';
 
   showWeatherPopup = false;
   weatherData: any = null;
@@ -82,32 +92,64 @@ export class HomeComponent {
 
   isAutofilling = false;
 
+  isEditingTripName = false;
+  editTripNameValue = '';
+
+  isEditingDayDate = false;
+  editDayDateValue = '';
+
   ngOnInit() {
     this.route.params.subscribe(async params => {
+      this.cdr.reattach();
       const dateParam = params['date'];
-     
-      if (dateParam) {
-        this.isHomePage = false;
+      
+      this.route.queryParams.subscribe(async queryParams => {
+        const tripIdParam = queryParams['tripId'];
+      
+        if (dateParam) {
+          this.viewMode = 'day-detail';
 
-        this.selectedDate = dateParam;
+          this.selectedDate = dateParam;
 
-        let navState = history.state as any;
+          if (tripIdParam) {
+            const uid = this.auth.uid;
+            if (uid) {
+              const tripDoc = await getDoc(doc(this.firestore, 'users', uid, 'trips', tripIdParam));
+              if (tripDoc.exists()) {
+                this.selectedTrip = { id: tripIdParam, name: (tripDoc.data() as any).name || '' };
+              } else {
+                this.selectedTrip = { id: tripIdParam, name: '' };
+              }
+            }
+          } else if (history.state?.tripId) {
+            const uid = this.auth.uid;
+            if (uid) {
+              const tripDoc = await getDoc(doc(this.firestore, 'users', uid, 'trips', history.state.tripId));
+              if (tripDoc.exists()) {
+                this.selectedTrip = { id: history.state.tripId, name: (tripDoc.data() as any).name || ''};
+              } else {
+                this.selectedTrip = { id: history.state.tripId, name: history.state.tripName || ''};
+              }
+            }
+          }
 
-        if (navState && navState.preloadedDay && navState.preloadedDay.date === dateParam) {
-          this.days = [navState.preloadedDay];
-          this.currentDayIndex = 0;
-          this.firstDayAdded = true;
-        } else {
-          const dayFromDb = await this.loadDayFromFirebase(dateParam);
-          if (dayFromDb) {
-            this.days = [dayFromDb];
+          let navState = history.state as any;
+
+          if (navState && navState.preloadedDay && navState.preloadedDay.date === dateParam) {
+            this.days = [navState.preloadedDay];
             this.currentDayIndex = 0;
             this.firstDayAdded = true;
           } else {
-            this.days = [];
-            this.firstDayAdded = false;
+            const dayFromDb = await this.loadDayFromFirebase(dateParam);
+            if (dayFromDb) {
+              this.days = [dayFromDb];
+              this.currentDayIndex = 0;
+              this.firstDayAdded = true;
+            } else {
+              this.days = [];
+              this.firstDayAdded = false;
+          }
         }
-      }
 
         if (navState?.editingActivity) {
           const editingAct = this.days
@@ -145,18 +187,97 @@ export class HomeComponent {
         }
         window.history.replaceState({}, '');
       } else {
-        this.isHomePage = true;
-        this.days = [];
-        await this.loadAllDays();
+        if (tripIdParam) {
+          const uid = this.auth.uid;
+          if (uid && !this.selectedTrip) {
+            const tripDoc = await getDoc(doc(this.firestore, 'users', uid, 'trips', tripIdParam));
+            if (tripDoc.exists()) {
+              this.selectedTrip = { id: tripIdParam, name: (tripDoc.data() as any).name || ''};
+            }
+          }
+          this.viewMode = 'days';
+          await this.loadAllDays();
+        } else {
+          this.viewMode = 'trips';
+          this.days = [];
+          await this.loadTrips();
+        }
       }  
       this.cdr.detectChanges(); // Force UI refresh after any route change/data load
       });
+    });  
+  }
+
+  async loadTrips() {
+    const uid = this.auth.uid;
+    if (!uid) return;
+    const tripsCol = collection(this.firestore, 'users', uid, 'trips');
+    const snapshot = await getDocs(tripsCol);
+    this.trips = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Trip));
+    this.cdr.detectChanges();
+  }
+
+  async createTrip() {
+    if (!this.newTripName.trim()) return;
+    const duplicate = this.trips.some(t => t.name.toLowerCase() === this.newTripName.trim().toLowerCase());
+    if (duplicate) {
+      alert('A trip with this name already exists.');
+      return;
+    }
+    const uid = this.auth.uid;
+    if (!uid) {
+      alert('You need to be logged in to create a trip.');
+      return;
+    }
+    try {
+      const tripId = Date.now().toString();
+      const newTrip: Trip = { id: tripId, name: this.newTripName.trim() };
+
+      await setDoc(doc(this.firestore, 'users', uid, 'trips', tripId), { name: newTrip.name });
+      this.trips.push(newTrip);
+      this.newTripName = '';
+      this.showCreateTripForm = false;
+      this.cdr.detectChanges();
+  } catch (err) {
+    console.error('Failed to create trip:', err);
+    alert('Failed the create trip. Please try again.');
+  }
+}
+
+  async openTrip(trip: Trip) {
+    this.selectedTrip = trip;
+    this.viewMode = 'days';
+    await this.loadAllDays();
+    window.history.replaceState({}, '', '/home?tripId=' + trip.id);
+    this.cdr.detectChanges();
+  }
+
+  async backToTrips() {
+    this.cdr.reattach();
+    this.viewMode = 'trips';
+    this.selectedTrip = null;
+    this.days = [];
+    this.currentDayIndex = -1;
+    await this.loadTrips();
+    window.history.replaceState({}, '', '/home');
+    this.cdr.detectChanges();
+  }
+
+  async backToDays() {
+    this.selectedDate = '';
+    this.currentDayIndex = -1;
+    this.viewMode = 'days';
+    if (this.selectedTrip) {
+      await this.loadAllDays();
+      window.history.replaceState({}, '', '/home?tripId=' + this.selectedTrip.id);
+    } 
+    this.cdr.detectChanges();
   }
 
 
   async saveDayToFirebase(day: DayPlan) {
     const uid = this.auth.uid;
-    if (!uid) return;
+    if (!uid || !this.selectedTrip) return;
 
     const sanitizedDay: PersistedDayPlan = {
       date: day.date,
@@ -171,19 +292,18 @@ export class HomeComponent {
         actualCost: act.actualCost !== undefined ? act.actualCost : null
       }))
     };
-    const docRef = doc(this.firestore, 'users', uid, 'days', day.date);
+    const docRef = doc(this.firestore, 'users', uid, 'trips', this.selectedTrip.id, 'days', day.date);
     await setDoc(docRef, sanitizedDay);
   }
 
 
   async loadDayFromFirebase(date: string): Promise<DayPlan | null> {
     const uid = this.auth.uid;
-    const docRef = doc(this.firestore, 'users', uid, 'days', date);
+    if (!uid || !this.selectedTrip) return null;
+    const docRef = doc(this.firestore, 'users', uid, 'trips', this.selectedTrip.id, 'days', date);
     const docSnap = await getDoc(docRef);
 
-
     if (!docSnap.exists()) return null;
-
 
     const data = docSnap.data() as PersistedDayPlan;
     return {
@@ -283,9 +403,11 @@ export class HomeComponent {
       return;
     }
 
+    this.currentDayIndex = -1;
+
     const existing = this.days.find(d => d.date === this.selectedDate);
     if (existing) {
-      this.router.navigate(['/day', this.selectedDate]);
+      alert(`${this.selectedDate} already exists.`)
       return;
     }
 
@@ -297,7 +419,7 @@ export class HomeComponent {
     };
 
     await this.saveDayToFirebase(newDay);
-    this.router.navigate(['/day', this.selectedDate]);
+    this.router.navigate(['/day', this.selectedDate], {queryParams: {tripId: this.selectedTrip!.id}, state: { tripName: this.selectedTrip!.name}});
   }
 
 
@@ -320,7 +442,7 @@ export class HomeComponent {
 
 
     if (act.expectedCost === undefined || act.expectedCost === null || act.expectedCost < 0 || (act.actualCost != null && act.actualCost < 0)) {
-      alert('Please enter a valid expected cost.');
+      alert('Please enter a valid cost.');
       return;
     }
 
@@ -346,22 +468,11 @@ export class HomeComponent {
   }
 
 
-  navigateToDay(direction: 'next' | 'prev') {
-    const current = new Date(this.selectedDate);
-    if (direction === 'next') current.setDate(current.getDate() + 1);
-    else current.setDate(current.getDate() - 1);
-
-
-    const newDate = current.toISOString().split('T')[0];
-    this.router.navigate(['/day', newDate]);
-  }
-
-
   async loadAllDays() {
+   if (!this.selectedTrip) return;
    const uid = this.auth.uid;
-   const daysCol = collection(this.firestore, 'users', uid, 'days');
+   const daysCol = collection(this.firestore, 'users', uid, 'trips', this.selectedTrip.id, 'days');
    const snapshot = await getDocs(daysCol);
-
 
    this.days = snapshot.docs
     .map(doc => {
@@ -376,24 +487,39 @@ export class HomeComponent {
     .sort((a, b) => a.date.localeCompare(b.date));
 
    this.firstDayAdded = this.days.length > 0;
-
-   console.log('Days loaded for homepage:', this.days.length);
    this.cdr.detectChanges();
   }
 
 
-  goToDay(date: string) {
-    const day = this.days.find(d => d.date === date);
-    this.router.navigate(['/day', date], {
-      state: {preloadedDay: day}
-    });
+  async goToDay(date: string) {
+    this.selectedDate = date;
+    
+    const index = this.days.findIndex(d => d.date === date);
+    if (index !== -1) {
+      this.currentDayIndex = index;
+    } else {
+      const dayFromDb = await this.loadDayFromFirebase(date);
+      if (dayFromDb) {
+        this.days.push(dayFromDb);
+        this.currentDayIndex = this.days.length - 1;
+      } else {
+        this.currentDayIndex = -1;
+      }
+    }
+    this.viewMode = 'day-detail';
+    window.history.replaceState({}, '', `/day/${date}?tripId=${this.selectedTrip?.id}`);
+    this.cdr.detectChanges();
   }
 
 
   openMapForActivity(act: Activity) {
     if (!act.temp) act.temp = {...act};
     this.router.navigate(['/map-picker'], {
-      state: { date: this.selectedDate, editingActivity: {...act.temp, id: act.id}}
+      state: { 
+        date: this.selectedDate, 
+        tripId: this.selectedTrip?.id,
+        tripName: this.selectedTrip?.name,
+        editingActivity: {...act.temp, id: act.id}}
     });
   }
 
@@ -401,6 +527,8 @@ export class HomeComponent {
     this.router.navigate(['/map-picker'], {
       state: {
         date: this.selectedDate,
+        tripId: this.selectedTrip?.id,
+        tripName: this.selectedTrip?.name,
         isNewActivity: true,
         tempActivity: day.tempActivity
       }
@@ -444,14 +572,18 @@ export class HomeComponent {
       `Delete the entire day (${day.date})? This cannot be undone.`
     );
 
-    if (!confirmDelete) return;
+    if (!confirmDelete || !this.selectedTrip) return;
 
     const uid = this.auth.uid;
-    const docRef = doc(this.firestore, 'users', uid, 'days', day.date);
+    const docRef = doc(this.firestore, 'users', uid, 'trips', this.selectedTrip.id, 'days', day.date);
     await deleteDoc(docRef);
 
-    this.days = this.days.filter(d => d.date !== day.date);
-    this.router.navigate(['/home']);
+    this.selectedDate = '';
+    this.currentDayIndex = -1;
+    this.viewMode = 'days';
+    await this.loadAllDays();
+    window.history.replaceState({}, '', '/home?tripId=' + this.selectedTrip.id);
+    this.cdr.detectChanges();
   }
 
   async openWeather(day: DayPlan, coords: {lat: number; lng: number} | null | undefined) {
@@ -764,5 +896,79 @@ export class HomeComponent {
     if (modifier === 'PM' && hours < 12) hours += 12;
     if (modifier === 'AM' && hours === 12) hours = 0;
     return hours * 60 + minutes;
+  }
+
+  startEditTripName() {
+    this.editTripNameValue = this.selectedTrip?.name || '';
+    this.isEditingTripName = true;
+    this.cdr.detectChanges();
+  }
+
+  cancelEditTripName() {
+    this.isEditingTripName = false;
+    this.cdr.detectChanges();
+  }
+
+  async saveEditTripName() {
+    const newName = this.editTripNameValue.trim();
+    if (!newName) {
+      alert('Create a trip name.');
+      return;
+    }
+    const duplicate = this.trips.some(t =>
+      t.name.toLowerCase() === newName.toLowerCase() && t.id !== this.selectedTrip!.id
+    );
+    if (duplicate) {
+      alert('A trip with this name already exists.');
+      return;
+    }
+    const uid = this.auth.uid;
+    await setDoc(doc(this.firestore, 'users', uid, 'trips', this.selectedTrip!.id), {name: newName});
+    this.selectedTrip!.name = newName;
+    const tripInList = this.trips.find(t => t.id === this.selectedTrip!.id);
+    if (tripInList) tripInList.name = newName;
+    this.isEditingTripName = false;
+    this.cdr.detectChanges();
+  }
+
+  startEditDayDate(day: DayPlan) {
+    this.editDayDateValue = day.date;
+    this.isEditingDayDate = true;
+    this.cdr.detectChanges();
+  }
+
+  cancelEditDayDate() {
+    this.isEditingDayDate = false;
+    this.cdr.detectChanges();
+  }
+
+  async saveEditDayDate(day: DayPlan) {
+    const newDate = this.editDayDateValue;
+    if (!newDate) {
+      alert('Please select a valid date.');
+      return;
+    }
+    if (newDate === day.date) {
+      this.isEditingDayDate = false;
+      return;
+    }
+    const duplicate = this.days.some(d => d.date === newDate);
+    if (duplicate) {
+      alert(`A day for ${newDate} already exists in this trip.`);
+      return;
+    }
+    const uid = this.auth.uid;
+    const newDocRef = doc(this.firestore, 'users', uid, 'trips', this.selectedTrip!.id, 'days', newDate);
+    await setDoc(newDocRef, { date: newDate, activities: day.activities });
+
+    // Delete old date
+    const oldDocRef = doc(this.firestore, 'users', uid, 'trips', this.selectedTrip!.id, 'days', day.date);
+    await deleteDoc(oldDocRef);
+
+    day.date = newDate;
+    this.selectedDate = newDate;
+    this.isEditingDayDate = false;
+    window.history.replaceState({}, '', `/day/${newDate}?tripId=${this.selectedTrip?.id}`);
+    this.cdr.detectChanges();
   }
 }

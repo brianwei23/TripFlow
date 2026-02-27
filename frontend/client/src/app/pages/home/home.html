@@ -1,8 +1,48 @@
-<h1>Your TripFlow Calendar</h1>
+<h1>My TripFlow Calendar</h1>
 
 <button class="logout-btn" (click)="logout()">Logout</button>
 
-@if (isHomePage) {
+@if (viewMode === 'trips') {
+  <div class="trips-header">
+    <h2>My Trips</h2>
+    @if (!showCreateTripForm) {
+      <button class="add-trip-btn" (click)="showCreateTripForm = true">Create New Trip</button>
+    }  
+  </div>
+
+  @if (showCreateTripForm) {
+    <div class="create-trip-form">
+      <input type="text" placeholder="Trip Name" [(ngModel)]="newTripName" />
+      <button class="save-btn" (click)="createTrip()">Save</button>
+      <button class="cancel-btn" (click)="showCreateTripForm = false">Cancel</button>
+    </div>
+  }
+
+  <div class="days-container">
+    @for (trip of trips; track trip.id) {
+      <div class="day-tile" (click)="openTrip(trip)">
+        <h3>{{trip.name}}</h3>
+      </div>
+    }
+    @if (trips.length === 0) {
+      <p style="text-align: center; margin-top: 20px; color: #666; width: 100%;">No trips here. Create one today!</p>
+    }
+  </div>
+}
+
+@if (viewMode === 'days') {
+  <div class="days-header">
+    <button class="back-btn" (click)="backToTrips()">Back to Trips</button>
+    @if (!isEditingTripName) {
+      <h2>{{selectedTrip?.name}} - Calendar</h2>
+      <button class="edit-btn" (click)="startEditTripName()">Edit Name</button>
+    } @else {
+      <input type="text" [(ngModel)]="editTripNameValue" />
+      <button class="save-btn" (click)="saveEditTripName()">Save</button>
+      <button class="cancel-btn" (click)="cancelEditTripName()">Cancel</button>
+    }
+  </div>
+
   <div class="add-day-container">
     <input type="date" [(ngModel)]="selectedDate" />
     <button class="add-day-btn" (click)="addDay()">+ Add New Day</button>
@@ -22,15 +62,25 @@
       </div>
     }
     @if (days.length === 0) {
-      <p style="text-align: center; margin-top: 20px; color: #666;">No trips have been planned yet. Please add a day.</p>
+      <p style="text-align: center; margin-top: 20px; color: #666; width: 100%;">No days planned yet.</p>
     }
   </div>
 }
 
-@if (!isHomePage) {
-  @for (day of days; track day.date) {
+@if (viewMode === 'day-detail') {
+  @for (day of showCurrentDay(); track day.date) {
     <div class="day-card">
-      <h3>{{day.date}} Schedule</h3>
+      <div class="days-header">
+        @if (!isEditingDayDate) {
+          <h3>{{day.date}} Schedule</h3>
+          <button class="edit-btn" (click)="startEditDayDate(day)">Edit Date</button>
+        } @else {
+          <input type="date" [(ngModel)]="editDayDateValue" />
+          <button class="save-btn" (click)="saveEditDayDate(day)">Save</button>
+          <button class="cancel-btn" (click)="cancelEditDayDate()">Cancel</button>
+        }  
+      </div>
+
       <div class="ai-row">
         <div class="ai-button-wrapper">
           <button class="ai-analyze-btn" (click)="analyzeCurrentDay(day)">
@@ -50,14 +100,13 @@
                     <p>Analyzing your trip...</p>
                   </div>
                 } @else {
-                  <div class="ai-response-text"
-                    [innerHTML]="formatAIResponse(aiAnalysisResult)">
-                  </div>
+                  <div class="ai-response-text" [innerHTML]="formatAIResponse(aiAnalysisResult)"></div>
                 }
               </div>
             </div>
           }
-         </div> 
+        </div> 
+
         <button class="ai-autofill-btn" (click)="autofillCurrentDay(day)">
           Autofill with AI
         </button>
@@ -69,14 +118,17 @@
           <span>AI is planning your trip...</span>
         </div>
       }
-   <div class="btn-row-container">
-    <button class="delete-day-btn" (click)="deleteDay(day)">Delete Day</button>
-   </div>
+
+      <div class="btn-row-container">
+        <button class="delete-day-btn" (click)="deleteDay(day)">Delete Day</button>
+      </div>
 
       <div class="add-activity-wrapper">
-        <button class="add-activity-btn" *ngIf="!day.isEditingNew" (click)="toggleAddForm(day)">
-          + Add Activity
-        </button>
+        @if (!day.isEditingNew) {
+          <button class="add-activity-btn" (click)="toggleAddForm(day)">
+            + Add Activity
+          </button>
+        }
       </div>
 
       @if (day.isEditingNew) {
@@ -134,54 +186,29 @@
         }
       </div>
     </div>
-  }
 
-  @for (day of showCurrentDay(); track day.date) {}
-  <div class="day-summary" *ngFor="let day of showCurrentDay()">
-    <h3>TripFlow Summary for the Day</h3>
-    <div class="summary-stats">
-      <p>
-        <b>Expected:</b>
-        ${{getExpectedTotalCost(day) | number:'1.2-2'}}
-      </p>
-
-      <p>
-        <b>Actual:</b>
-        ${{getActualTotalCost(day) | number:'1.2-2'}}
-      </p>
-
-      <p>
-        <b>Difference:</b>
-        {{getBudgetDifferencePercent(day) | number:'1.0-1'}}%
-      </p>
-
-      <p>
-        <b>Planning Accuracy:</b>
-        {{getPlanningAccuracyScore(day) * 100 | number:'1.0-0'}}%
-      </p>
-
-      <p>
-        <b>Expected Cost Density:</b>
-        ${{getExpectedCostDensity(day) | number:'1.2-2'}} / hour
-      </p>
-
-      <p>
-        <b>Actual Cost Density:</b>
-        ${{getActualCostDensity(day) | number:'1.2-2'}}
-        / hour
-      </p>
+    <div class="day-summary">
+      <h3>TripFlow Summary for the Day</h3>
+      <div class="summary-stats">
+        <p><b>Expected:</b> ${{getExpectedTotalCost(day) | number:'1.2-2'}}</p>
+        <p><b>Actual:</b> ${{getActualTotalCost(day) | number:'1.2-2'}}</p>
+        <p><b>Difference:</b> {{getBudgetDifferencePercent(day) | number:'1.0-1'}}%</p>
+        <p><b>Planning Accuracy:</b> {{getPlanningAccuracyScore(day) * 100 | number:'1.0-0'}}%</p>
+        <p><b>Expected Cost Density:</b> ${{getExpectedCostDensity(day) | number:'1.2-2'}} / hour</p>
+        <p><b>Actual Cost Density:</b> ${{getActualCostDensity(day) | number:'1.2-2'}} / hour</p>
+      </div>
+      <div class="back-home-row">
+          <button class="add-day-btn" (click)="backToDays()">Back to Trip Calendar</button>
+      </div>
     </div>
-
-    <div class="back-home-row">
-        <button class="add-day-btn" [routerLink]="['/home']">Back to Home</button>
-    </div>
-  </div>
   }
+}
 
-<app-weather
-  *ngIf="showWeatherPopup"
-  [weatherData]="weatherData"
-  [date]="weatherDate"
-  [location]="weatherLocation"
-  (close)="closeWeatherPopup() ">
-</app-weather>
+@if (showWeatherPopup) {
+  <app-weather
+    [weatherData]="weatherData"
+    [date]="weatherDate"
+    [location]="weatherLocation"
+    (close)="closeWeatherPopup()">
+  </app-weather>
+}  
