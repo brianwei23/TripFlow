@@ -30,7 +30,7 @@
       <div class="day-tile" (click)="openTrip(trip)">
         <h3>{{trip.name}}</h3>
         @if (trip.dateRange) {
-          <p class="trip-date-range"><b>{{trip.dateRange.start}} — {{trip.dateRange.end}}</b></p>
+          <p class="trip-date-range"><b>{{formatDayLabel(trip.dateRange.start)}} — {{formatDayLabel(trip.dateRange.end)}}</b></p>
         } @else {
           <p class="trip-date-range trip-date-range--empty">No dates planned yet.</p>
         }
@@ -75,6 +75,24 @@
     <button class="add-day-btn" (click)="createDateRange()" style="margin-left: 10px;">Create Date Range</button>
   </div>
 
+  <div class="add-general-days-container" style="text-align: center; margin-bottom: 20px;">
+    <span>Or create general days: Day</span>
+    <input
+      type="number"
+      [(ngModel)]="generalDayStart"
+      min="1"
+      style="width: 60px; padding: 6px; border-radius: 4px; border: 1px solid #ccc;"
+    />
+    <span>to Day</span>
+    <input
+      type="number"
+      [(ngModel)]="generalDayEnd"
+      min="1"
+      style="width: 60px; padding: 6px; border-radius: 4px; border: 1px solid #ccc;"
+    />
+    <button class="add-day-btn" (click)="createGeneralDayRange()" style="margin-left: 10px;">Create Days</button>
+  </div>
+
   <div class="create-ai-trip-container" style="text-align: center; margin-bottom: 20px;">
     <input
       type="text"
@@ -103,7 +121,7 @@
   <div class="days-container">
     @for (day of days; track day.date) {
       <div class="day-tile" (click)="goToDay(day.date)">
-        <h3>{{day.date}}</h3>
+        <h3>{{formatDayLabel(day.date)}}</h3>
       </div>
     }
     @if (days.length === 0) {
@@ -117,7 +135,7 @@
     <div class="day-card">
       <div class="days-header">
         @if (!isEditingDayDate) {
-          <h3>{{day.date}} Schedule</h3>
+          <h3>{{formatDayLabel(day.date)}} Schedule</h3>
           <button class="edit-btn" (click)="startEditDayDate(day)">Edit Date</button>
         } @else {
           <input type="date" [(ngModel)]="editDayDateValue" />

@@ -90,15 +90,13 @@ def analyze_day():
         prompt = f"""
         Analyze the travel schedule and give good advice:
 
-        Date: {data['date']}
-
-        Time Range: {data['startTime']} - {data['endTime']}
+        Date: {data.get('date', 'Unknown')}
 
         Activities:
-        {data['activities']}
+        {data.get('activities', [])}
 
         Metrics: 
-        {data['metrics']}
+        {data.get('metrics', {})}
 
         Please give:
         - Tourist destination feedback and suggestions
@@ -106,6 +104,8 @@ def analyze_day():
         - Budget feedback
         - Cost efficiency feedback
         - Feasibility
+        - Best ways to navigate to each location/activity. Be specific.
+        - Best airline and cheapest flights according to which month/date/time. Best hotels in the area. Make it specific to the situation.
         - Overall planning score (1-100)
         - And anything else important
         """
@@ -157,7 +157,7 @@ def autofill_day():
     Be a bit specific on activity locations and names. For example, you can include city name, state/province, or country in location. 
     Create accurate latitute and longitude coordinates for each location, and put it in the 'coords' object.
     DO NOT make new activities that are already existing in the existing activities list.
-    DO NOT MAKE ANY REPEAT ACTIVITIES AT SAME LANDMARK!!!
+    DO NOT MAKE ANY REPEAT ACTIVITIES AT SAME LANDMARK!!! THERE ARE NO EXCEPTIONS TO THIS RULE.
     Make sure the schedule flows perfectly and is feasible. Make sure locations and landmarks are real.
     Example format:
     {{

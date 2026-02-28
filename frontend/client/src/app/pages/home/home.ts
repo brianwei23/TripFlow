@@ -75,6 +75,9 @@ export class HomeComponent {
   startDateRange: string = '';
   endDateRange: string = '';
 
+  generalDayStart: number | null = null;
+  generalDayEnd: number | null = null;
+
   private route = inject(ActivatedRoute);
 
   private aiService = inject(AIService);
@@ -109,7 +112,6 @@ export class HomeComponent {
 
   ngOnInit() {
     this.route.params.subscribe(async params => {
-      this.cdr.reattach();
       const dateParam = params['date'];
       
       this.route.queryParams.subscribe(async queryParams => {
@@ -212,7 +214,7 @@ export class HomeComponent {
           await this.loadTrips();
         }
       }  
-      this.cdr.detectChanges(); // Force UI refresh after any route change/data load
+      Promise.resolve().then(() => this.cdr.detectChanges());
       });
     });  
   }
@@ -300,7 +302,6 @@ export class HomeComponent {
   }
 
   async backToTrips() {
-    this.cdr.reattach();
     this.showCreateTripForm = false;
     this.newTripName = '';
     this.viewMode = 'trips';
@@ -309,7 +310,7 @@ export class HomeComponent {
     this.currentDayIndex = -1;
     await this.loadTrips();
     window.history.replaceState({}, '', '/home');
-    this.cdr.detectChanges();
+    Promise.resolve().then(() => this.cdr.detectChanges());
   }
 
   async backToDays() {
@@ -518,6 +519,47 @@ export class HomeComponent {
     this.cdr.detectChanges();
   }
 
+  async createGeneralDayRange() {
+    const start = this.generalDayStart;
+    const end = this.generalDayEnd;
+
+    if (!start || !end || start < 1 || end < 1) {
+      alert('Please enter valid day numbers.');
+      return;
+    }
+    if (start > end) {
+      alert('Start day cannot be greater than end day.');
+      return;
+    }
+    const savePromises: Promise<void>[] = [];
+    let newDaysAdded = 0;
+
+    for (let i = start; i <= end; i++) {
+      const dayKey = `general-${i}`;
+      const existing = this.days.find(d => d.date === dayKey);
+      if (!existing) {
+        const newDay: DayPlan = {
+          date: dayKey,
+          activities: [],
+          tempActivity: { name: '', start: '', end: '', expectedCost: undefined, actualCost: null },
+          isEditingNew: false,
+        };
+        savePromises.push(this.saveDayToFirebase(newDay));
+        this.days.push(newDay);
+        newDaysAdded++;
+      }
+    }
+    if (newDaysAdded === 0) {
+      alert('All of those days already exist.');
+      return;
+    }
+    await Promise.all(savePromises);
+    this.toggleSortRecent();
+    this.generalDayStart = null;
+    this.generalDayEnd = null;
+    this.cdr.detectChanges();
+  }
+
 
   saveActivity(day: DayPlan) {
     const act = day.tempActivity;
@@ -718,6 +760,7 @@ export class HomeComponent {
       }
       console.log('Forecast day data:', forecastDay);
       this.weatherData = forecastDay;
+      this.weatherDate = data.forecast[0].date || day.date;
       this.weatherLocation = data.location || '';
       this.cdr.detectChanges();
     } catch (error) {
@@ -809,6 +852,14 @@ export class HomeComponent {
     return `${hour}:${m.toString().padStart(2, '0')} ${period}`;
   }
 
+  formatDayLabel(date: string): string {
+    if (date.startsWith('general-')) {
+      const num = date.replace('general-', '');
+      return `Day ${num}`;
+    }
+    return date;
+  }
+
   async analyzeCurrentDay(day: DayPlan) {
     if (day.aiHasAnalyzed && day.aiAnalysisResult) {
       this.aiAnalysisResult = day.aiAnalysisResult;
@@ -826,7 +877,7 @@ export class HomeComponent {
     this.cdr.detectChanges();
 
     const payload = {
-      date: day.date,
+      date: this.formatDayLabel(day.date),
       activities: this.getAllActivities(day),
       metrics: {
         expectedTotal: this.getExpectedTotalCost(day),
@@ -1093,36 +1144,37 @@ export class HomeComponent {
 
     if (!confirm(`You are about to delete the entire trip, "${trip.name}". This also deletes any associated data like dates and activities. This cannot be reversed.`)) {
     return;
-  }
-
-  const uid = this.auth.uid;
-  if (!uid) return;
-
-  const tripRef = doc(this.firestore, 'users', uid, 'trips', trip.id);
-  const daysCollectionRef = collection(this.firestore, 'users', uid, 'trips', trip.id, 'days');
-
-  try {
-    const daysSnapshot = await getDocs(daysCollectionRef);
-
-    const deletePromises = daysSnapshot.docs.map(dayDoc => deleteDoc(dayDoc.ref));
-    await Promise.all(deletePromises);
-
-    await deleteDoc(tripRef);
-
-    this.trips = this.trips.filter(t => t.id !== trip.id);
-
-    if (this.selectedTrip?.id === trip.id) {
-      this.backToTrips();
-    } else {
-      this.cdr.detectChanges();
     }
 
-    alert('Trip and associated data has been deleted.');
-  } catch (error) {
-    console.error("Error deleting trip:", error);
-    alert('Failed to delete trip. Please try again.');
+    const uid = this.auth.uid;
+    if (!uid) return;
+
+    const tripRef = doc(this.firestore, 'users', uid, 'trips', trip.id);
+    const daysCollectionRef = collection(this.firestore, 'users', uid, 'trips', trip.id, 'days');
+
+    try {
+      const daysSnapshot = await getDocs(daysCollectionRef);
+
+      const deletePromises = daysSnapshot.docs.map(dayDoc => deleteDoc(dayDoc.ref));
+      await Promise.all(deletePromises);
+
+      await deleteDoc(tripRef);
+
+      this.trips = this.trips.filter(t => t.id !== trip.id);
+
+      if (this.selectedTrip?.id === trip.id) {
+        await this.backToTrips();
+      } else {
+        setTimeout(() => this.cdr.detectChanges(), 0);
+      }
+      alert('Trip and associated data has been deleted.');
+
+      alert('Trip and associated data has been deleted.');
+    } catch (error) {
+      console.error("Error deleting trip:", error);
+      alert('Failed to delete trip. Please try again.');
+    }
   }
-}
 
   startEditDayDate(day: DayPlan) {
     this.editDayDateValue = day.date;
