@@ -72,6 +72,9 @@ export class HomeComponent {
   selectedDate: string = '';
   firstDayAdded: boolean = false;
 
+  startDateRange: string = '';
+  endDateRange: string = '';
+
   private route = inject(ActivatedRoute);
 
   private aiService = inject(AIService);
@@ -94,6 +97,9 @@ export class HomeComponent {
   aiAnalysisResult = '';
 
   isAutofilling = false;
+  autofillLocation: string = '';
+  aiTripLocation: string = '';
+  isCreatingAITrip: boolean = false;
 
   isEditingTripName = false;
   editTripNameValue = '';
@@ -463,6 +469,53 @@ export class HomeComponent {
 
     await this.saveDayToFirebase(newDay);
     this.router.navigate(['/day', this.selectedDate], {queryParams: {tripId: this.selectedTrip!.id}, state: { tripName: this.selectedTrip!.name}});
+  }
+
+  async createDateRange() {
+    if (!this.startDateRange || !this.endDateRange) {
+      alert('Please select both start and end date.');
+      return;
+    }
+    const start = new Date(this.startDateRange + 'T00:00:00');
+    const end = new Date(this.endDateRange + 'T00:00:00');
+
+    if (start > end) {
+      alert('Start date cannot be after end date.');
+      return;
+    }
+
+    let currentDate = new Date(start);
+    const savePromises: Promise<void>[] = [];
+    let newDaysAdded = 0;
+
+    while (currentDate <= end) {
+      const yyyy = currentDate.getFullYear();
+      const mm = String(currentDate.getMonth() + 1).padStart(2, '0');
+      const dd = String(currentDate.getDate()).padStart(2, '0');
+      const dateString = `${yyyy}-${mm}-${dd}`;
+
+      const existing = this.days.find(d => d.date === dateString);
+      if (!existing) {
+        const newDay: DayPlan = {
+          date: dateString,
+          activities: [],
+          tempActivity: { name: '', start: '', end: '', expectedCost: undefined, actualCost: null },
+          isEditingNew: false,
+        };
+        savePromises.push(this.saveDayToFirebase(newDay));
+        newDaysAdded++;
+      }
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+    if (newDaysAdded > 0) {
+      await Promise.all(savePromises);
+      await this.loadAllDays();
+    } else {
+      alert('All dates in the range already exist.');
+    }
+    this.startDateRange = '';
+    this.endDateRange = '';
+    this.cdr.detectChanges();
   }
 
 
@@ -858,7 +911,8 @@ export class HomeComponent {
       existingActivities: this.getAllActivities(day),
       emptySlots,
       dayStart: "00:00",
-      dayEnd: "23:59"
+      dayEnd: "23:59",
+      locationContext: this.autofillLocation
     };
 
     try {
@@ -887,11 +941,70 @@ export class HomeComponent {
       } else {
         alert("AI did not return any valid activities to add.");
       }
+      this.autofillLocation = '';
     } catch (err) {
       console.error("Autofill error:", err);
       alert("Autofill failed.");
     } finally {
       this.isAutofilling = false;
+      this.cdr.detectChanges();
+    }
+  }
+
+  async createAITrip() {
+    if (!this.aiTripLocation.trim()) {
+      alert('Please enter a location for the AI generated trip.');
+      return;
+    }
+    if (this.days.length === 0) {
+      alert('Please add at least one day to the trip first before proceeding.');
+    }
+    this.isCreatingAITrip = true;
+    this.cdr.detectChanges();
+
+    try {
+      for (const day of this.days) {
+        // Load entire day from Firebase to get existing activities
+        const loadedDay = await this.loadDayFromFirebase(day.date);
+        const existingActivities = loadedDay?.activities ?? [];
+
+        const emptySlots = [{ start: '00:00', end: '23:59' }];
+
+        const payload = {
+          existingActivities,
+          emptySlots,
+          dayStart: '00:00',
+          dayEnd: '23:59',
+          locationContext: this.aiTripLocation.trim()
+        };
+
+        try {
+          const response = await this.aiService.autofillDay(payload);
+          let cleanJson = response.result;
+          if (typeof cleanJson === 'string') {
+            cleanJson = cleanJson.replace(/```json/g, '').replace(/```/g, '').trim();
+          }
+          const parsed = JSON.parse(cleanJson);
+
+          if (!parsed.activities || !Array.isArray(parsed.activities)) continue;
+
+          day.activities = existingActivities;
+
+          const newActivities = parsed.activities.slice(0, 4);
+          for (const act of newActivities) {
+            if (act.name && act.start && act.end) {
+              this.insertAIActivity(day, act);
+            }
+          }
+          await this.saveDayToFirebase(day);
+        } catch (err) {
+          console.error(`Failed to autofill day ${day.date}:`, err);
+        }
+      }
+      this.aiTripLocation = '';
+      alert('AI Trip creation complete!');
+    } finally {
+      this.isCreatingAITrip = false;
       this.cdr.detectChanges();
     }
   }
@@ -925,6 +1038,7 @@ export class HomeComponent {
       end: aiActivity.end,
       expectedCost: aiActivity.expectedCost || 0,
       actualCost: null,
+      coords: aiActivity.coords || null,
       isEditing: false,
       source: 'ai'
     });

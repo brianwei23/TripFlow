@@ -67,6 +67,32 @@
     <button class="add-day-btn" (click)="addDay()">+ Add New Day</button>
   </div>
 
+  <div class="add-date-range-container" style="text-align: center; margin-bottom: 20px;">
+    <span>Or create a date range: </span>
+    <input type="date" [(ngModel)]="startDateRange" />
+    <span> to </span>
+    <input type="date" [(ngModel)]="endDateRange" />
+    <button class="add-day-btn" (click)="createDateRange()" style="margin-left: 10px;">Create Date Range</button>
+  </div>
+
+  <div class="create-ai-trip-container" style="text-align: center; margin-bottom: 20px;">
+    <input
+      type="text"
+      [(ngModel)]="aiTripLocation"
+      placeholder="Location (required)"
+      style="padding: 8px; border-radius: 4px; border: 1px solid #ccc; width: 200px;"
+    />
+    <button class="add-day-btn" (click)="createAITrip()" style="margin-left: 10px;">
+      Create AI Trip
+    </button>
+    @if (isCreatingAITrip) {
+      <div style="margin-top: 10px;">
+        <div class="spinner-small" style="display: inline-block;"></div>
+        <span>AI is planning your whole trip...</span>
+      </div>
+    }
+  </div>
+
   <div style="text-align:center; margin-bottom: 16px;">
     <label class="sort-text">
       <input class="sort-checkbox" type="checkbox" [(ngModel)]="sortRecentFirst" (change)="toggleSortRecent()"/>
@@ -126,9 +152,18 @@
           }
         </div> 
 
+        <div class="ai-controls" style="margin: 20px 0; display: flex; gap: 10px; justify-content: center;">
+          <input
+            type="text"
+            [(ngModel)]="autofillLocation"
+            placeholder="Enter location (optional)"
+            class="location-input"
+            style="padding: 8px; border-radius: 4px; border: 1px solid #ccc; width: 200px;"
+          />
         <button class="ai-autofill-btn" (click)="autofillCurrentDay(day)">
           Autofill with AI
         </button>
+        </div>
       </div>
 
       @if (isAutofilling) {

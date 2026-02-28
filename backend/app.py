@@ -134,6 +134,8 @@ def autofill_day():
         return jsonify({"status": "ok"}), 200
     
     data = request.json
+    location_context = data.get('locationContext', '')
+    location_instruction = f"The trip is in {location_context}." if location_context else "Location is not specified."
 
     if not data:
         return jsonify({"error": "Missing data"}), 400
@@ -147,16 +149,20 @@ def autofill_day():
 
     prompt = f"""
     Task: Fill these empty time slots with travel activities.
+    {location_instruction}
     Empty Slots: {data.get('emptySlots')}
     Existing Activities: {data.get('existingActivities')}
     Return EXACTLY VALID JSON. This means no markdown and no conversation.
     Start times must be in the time slot it's in. End times must be after start times but don't have to be in the time slot in question.
     Be a bit specific on activity locations and names. For example, you can include city name, state/province, or country in location. 
+    Create accurate latitute and longitude coordinates for each location, and put it in the 'coords' object.
     DO NOT make new activities that are already existing in the existing activities list.
+    DO NOT MAKE ANY REPEAT ACTIVITIES AT SAME LANDMARK!!!
+    Make sure the schedule flows perfectly and is feasible. Make sure locations and landmarks are real.
     Example format:
     {{
         "activities": [
-            {{ "name": "Lunch at Disneyland", "start": "11:00", "end": "12:00", "expectedCost": 40, "location": "Disneyland Anaheim"}}
+            {{ "name": "Lunch at Disneyland", "start": "11:00", "end": "12:00", "expectedCost": 40, "location": "Disneyland Anaheim", "coords": {{"lat": 43.2943, -203.4829}}}}
         ]
     }}
     """
