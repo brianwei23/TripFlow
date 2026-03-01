@@ -36,3 +36,13 @@ h2 {
     border-radius: 6px;
     cursor: pointer;
 }
+
+.search-btn {
+    background-color: blue;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    font-size: 22px;
+    border-radius: 6px;
+    cursor: pointer;
+}

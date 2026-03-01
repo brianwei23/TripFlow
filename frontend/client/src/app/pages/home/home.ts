@@ -823,22 +823,6 @@ export class HomeComponent {
     return totalMinutes / 60;
   }
 
-  getActualCostDensity(day: DayPlan): number {
-    const actual = this.getActualTotalCost(day);
-    const hours = this.getTotalScheduledHours(day);
-
-    if (hours === 0) return 0;
-
-    return actual / hours;
-  }
-
-  getExpectedCostDensity(day: DayPlan): number {
-    const expected = this.getExpectedTotalCost(day);
-    const hours = this.getTotalScheduledHours(day);
-    if (hours === 0) return 0;
-    return expected / hours;
-  }
-
   private parseTimeToMinutes(time: string): number {
     const [h, m] = time.split(':').map(Number);
     return h * 60 + m;
@@ -883,8 +867,6 @@ export class HomeComponent {
         expectedTotal: this.getExpectedTotalCost(day),
         actualTotal: this.getActualTotalCost(day),
         planningAccuracy: this.getPlanningAccuracyScore(day),
-        expectedCostDensity: this.getExpectedCostDensity(day),
-        actualCostDensity: this.getActualCostDensity(day)
       }
     };
 

@@ -108,6 +108,7 @@ def analyze_day():
         - Best airline and cheapest flights according to which month/date/time. Best hotels in the area. Make it specific to the situation.
         - Overall planning score (1-100)
         - And anything else important
+        - REMEMBER all costs are in USD
         """
 
         response = requests.post(
@@ -158,7 +159,7 @@ def autofill_day():
     Create accurate latitute and longitude coordinates for each location, and put it in the 'coords' object.
     DO NOT make new activities that are already existing in the existing activities list.
     DO NOT MAKE ANY REPEAT ACTIVITIES AT SAME LANDMARK!!! THERE ARE NO EXCEPTIONS TO THIS RULE.
-    Make sure the schedule flows perfectly and is feasible. Make sure locations and landmarks are real.
+    Make sure the schedule flows perfectly and is feasible. Make sure locations and landmarks are real. All costs are in USD.
     Example format:
     {{
         "activities": [

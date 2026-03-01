@@ -72,23 +72,23 @@
 
     <div class="add-options-divider"></div>
     <div class="add-date-range-container" style="text-align: center; margin-bottom: 20px;">
-      <span><b>Or create a date range: </b></span>
+      <span style="font-size: 24px;"><b>Or create a date range: </b></span>
       <input type="date" [(ngModel)]="startDateRange" />
-      <span> to </span>
+      <span style="font-size: 24px;"> <b>to</b> </span>
       <input type="date" [(ngModel)]="endDateRange" />
       <button class="add-day-btn" (click)="createDateRange()" style="margin-left: 10px;">Create Date Range</button>
     </div>
 
     <div class="add-options-divider"></div>
     <div class="add-general-days-container" style="text-align: center; margin-bottom: 20px;">
-      <span><b>Or create general days: Day</b></span>
+      <span style="font-size: 24px;"><b>Or create general days: Day</b></span>
       <input
         type="number"
         [(ngModel)]="generalDayStart"
         min="1"
         style="width: 60px; padding: 6px; border-radius: 4px; border: 1px solid #ccc;"
       />
-      <span><b>to Day</b></span>
+      <span style="font-size: 24px;"><b>to Day</b></span>
       <input
         type="number"
         [(ngModel)]="generalDayEnd"
@@ -147,15 +147,20 @@
       <div class="days-header">
         @if (!isEditingDayDate) {
           <h3>{{formatDayLabel(day.date)}} Schedule</h3>
-          <button class="edit-btn" (click)="startEditDayDate(day)">Edit Date</button>
+          <div class="day-action-btns">
+            <button class="edit-btn" (click)="startEditDayDate(day)">Edit Day</button>
+            <button class="delete-day-btn" (click)="deleteDay(day)">Delete Day</button>
+          </div>
         } @else {
-          <input type="date" [(ngModel)]="editDayDateValue" />
-          <button class="save-btn" (click)="saveEditDayDate(day)">Save</button>
-          <button class="cancel-btn" (click)="cancelEditDayDate()">Cancel</button>
+          <input type="date" [(ngModel)]="editDayDateValue" class="edit-day-date-input" />
+          <div class="edit-trip-btn-row">
+            <button class="save-btn" (click)="saveEditDayDate(day)">Save</button>
+            <button class="cancel-btn" (click)="cancelEditDayDate()">Cancel</button>
+          </div>
         }  
       </div>
 
-      <div class="ai-row">
+      <div class="ai-row" style="flex-direction: column; align-items: center;">
         <div class="ai-button-wrapper">
           <button class="ai-analyze-btn" (click)="analyzeCurrentDay(day)">
             Analyze with AI
@@ -187,7 +192,7 @@
             [(ngModel)]="autofillLocation"
             placeholder="Enter location (optional)"
             class="location-input"
-            style="padding: 8px; border-radius: 4px; border: 1px solid #ccc; width: 200px;"
+            style="padding: 12px 16px; border-radius: 9px; margin-right: 10px; border: 1px solid #ccc; width: 250px; font-size: 20px;"
           />
         <button class="ai-autofill-btn" (click)="autofillCurrentDay(day)">
           Autofill with AI
@@ -201,10 +206,6 @@
           <span>AI is planning your trip...</span>
         </div>
       }
-
-      <div class="btn-row-container">
-        <button class="delete-day-btn" (click)="deleteDay(day)">Delete Day</button>
-      </div>
 
       <div class="add-activity-wrapper">
         @if (!day.isEditingNew) {
@@ -277,8 +278,6 @@
         <p><b>Actual:</b> ${{getActualTotalCost(day) | number:'1.2-2'}}</p>
         <p><b>Difference:</b> {{getBudgetDifferencePercent(day) | number:'1.0-1'}}%</p>
         <p><b>Planning Accuracy:</b> {{getPlanningAccuracyScore(day) * 100 | number:'1.0-0'}}%</p>
-        <p><b>Expected Cost Density:</b> ${{getExpectedCostDensity(day) | number:'1.2-2'}} / hour</p>
-        <p><b>Actual Cost Density:</b> ${{getActualCostDensity(day) | number:'1.2-2'}} / hour</p>
       </div>
       <div class="back-home-row">
           <button class="add-day-btn" (click)="backToDays()">Back to Trip Calendar</button>
