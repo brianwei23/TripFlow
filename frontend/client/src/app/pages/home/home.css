@@ -9,13 +9,54 @@ h3 {
     font-size: 21px;
 }
 
-.add-day-container {
-    font-size: 1.5rem;
+.add-options-card {
+    max-width: 800px;
+    margin: 0 auto 40px auto;
+    padding: 28px 32px;
+    border: 2px solid #ddd;
+    border-radius: 12px;
+    background: #fafafa;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+
+.add-options-label {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #333;
+    margin-bottom: 8px;
+    text-align: center;
+}
+
+.add-options-divider {
+    width: 100%;
+    height: 1px;
+    background: #ddd;
+    margin: 10px 0;
+    border: none;
+}
+
+.add-options-divider::before { left: 0; }
+.add-options-divider::after { right: 0; }
+
+.add-day-container, .add-date-range-container, .add-general-days-container, .create-ai-trip-container {
+    font-size: 1.3rem;
     display: flex;
     justify-content: center;
-    margin: 20px 0;
-    gap: 16px;
-    zoom: 1.2;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+    margin: 0;
+}
+
+.add-general-days-container input {
+    zoom: 1.5;
+}
+
+.add-options-label, .add-options-divider {
+    color: #222;
 }
 
 .add-day-btn {
@@ -28,17 +69,31 @@ h3 {
     border-radius: 6px;
     cursor: pointer;
     transition: background-color 0.3s;
+    opacity: 0.4;
 }
 
 .add-day-btn:hover {
     background-color: #45a049;
 }
 
+.add-options-card input[type="date"],
+.add-options-card input[type="text"] {
+    padding: 12px 16px;
+    font-size: 1.2rem;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+    height: 50px;
+    box-sizing: border-box;
+    zoom: 1.3;
+}
+
+
 .sort-checkbox {
     width: 18px;
     height: 18px;
     margin-right: 8px;
     cursor: pointer;
+    zoom: 1.1;
 }
 
 .sort-text {
@@ -47,6 +102,7 @@ h3 {
     align-items: center;
     justify-content: center;
     gap: 8px;
+    zoom: 1.2;
 }
 
 .time-select {
@@ -213,6 +269,7 @@ h3 {
     top: 20px;
     right: 20px;
     z-index: 1000;
+    opacity: 0.5;
 }
 
 .logout-btn:hover {
@@ -231,7 +288,7 @@ h3 {
 .day-tile {
     min-width: 150px;
     max-width: 200px;
-    font-size: 18px;
+    font-size: 22px;
     padding: 12px;
     border-radius: 8px;
     border: 1px solid #ddd;
@@ -311,7 +368,8 @@ h3 {
     border-radius: 6px;
     cursor: pointer;
     transition: background-color 0.2s ease, transform 0.1s ease;
-    font-size: 22px;
+    font-size: 25px;
+    opacity: 0.4;
 }
 
 .cancel-btn {
@@ -323,7 +381,8 @@ h3 {
     border-radius: 6px;
     cursor: pointer;
     transition: background-color 0.2s ease, transform 0.1s ease;
-    font-size: 22px;
+    font-size: 24px;
+    opacity: 0.5;
 }
 
 .time-edit-row {
@@ -363,15 +422,48 @@ h3 {
     border: none;
     color: white;
     cursor: pointer;
-    font-size: 20px;
+    font-size: 30px;
     padding: 8px 14px;
     border-radius: 6px;
     font-weight: 600;
     transition: background-color 0.2s ease;
+    opacity: 0.4;
+    margin-top: 20px;
+    margin-bottom: 20px;
+}
+
+.delete-trip-btn {
+    background: #f20b0b; 
+    border: none;
+    color: white;
+    cursor: pointer;
+    font-size: 30px;
+    padding: 8px 14px;
+    border-radius: 6px;
+    font-weight: 600;
+    transition: background-color 0.2s ease;
+    margin-left: 20px;
+    opacity: 0.5;
 }
 
 .edit-btn:hover {
     background-color: #45a049;
+}
+
+.edit-trip-name-input {
+    font-size: 24px;
+    padding: 10px 16px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+    width: 320px;
+    margin-bottom: 12px;
+}
+
+.edit-trip-btn-row {
+    display: flex;
+    gap: 16px;
+    justify-content: center;
+    margin-top: 4px;
 }
 
 .delete-btn {
@@ -570,6 +662,7 @@ h3 {
 .trips-header, .days-header {
     text-align: center;
     margin-bottom: 20px;
+    font-size: 22px;
 }
 
 .add-trip-btn {
@@ -577,11 +670,14 @@ h3 {
     background-color: #2196f3;
     color: white;
     font-weight: bold;
-    font-size: 20px;
+    font-size: 24px;
     border: none;
     border-radius: 6px;
     cursor: pointer;
     transition: background-color 0.3s;
+    opacity: 0.4;
+    margin-top: 15px;
+    margin-bottom: 15px;
 }
 
 .add-trip-btn:hover { background-color: #1976d2; }
@@ -603,21 +699,22 @@ h3 {
 }
 
 .back-btn {
-    padding: 6px 12px;
-    font-size: 16px;
+    padding: 10px 17px;
+    font-size: 30px;
     background: #9e9e9e;
     color: white;
     border: none;
-    border-radius: 4px;
+    border-radius: 8px;
     cursor: pointer;
     margin-bottom: 10px;
     font-weight: bold;
+    opacity: 0.4;
 }
 
 .back-btn:hover { background: #757575; }
 
 .trip-date-range {
-    font-size: 1.1rem;
+    font-size: 1.2rem;
     color: #555;
     margin: 4px 0 0;
 }

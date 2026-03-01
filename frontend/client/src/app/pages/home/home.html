@@ -44,71 +44,78 @@
 
 @if (viewMode === 'days') {
   <div class="days-header">
-    <button class="back-btn" (click)="backToTrips()">Back to Trips</button>
     @if (!isEditingTripName) {
       <h2>{{selectedTrip?.name}} - Calendar</h2>
-      <div class="header-actions"> <button class="edit-btn" (click)="startEditTripName()">Edit Name</button>
+      <div class="header-actions"> <button class="edit-btn" (click)="startEditTripName()">Edit Trip</button>
         <button
           class="delete-trip-btn"
-          (click)="deleteTrip(selectedTrip!, $event)"
-          style="background: #ff4d4d; color: white; border: none; border-radius: 4px; padding: 5px 10px; cursor: pointer; margin-left: 8px;">
+          (click)="deleteTrip(selectedTrip!, $event)" >
           Delete Trip
         </button>
       </div>
     } @else {
-      <input type="text" [(ngModel)]="editTripNameValue" />
-      <button class="save-btn" (click)="saveEditTripName()">Save</button>
-      <button class="cancel-btn" (click)="cancelEditTripName()">Cancel</button>
-    }
-  </div>
-
-  <div class="add-day-container">
-    <input type="date" [(ngModel)]="selectedDate" />
-    <button class="add-day-btn" (click)="addDay()">+ Add New Day</button>
-  </div>
-
-  <div class="add-date-range-container" style="text-align: center; margin-bottom: 20px;">
-    <span>Or create a date range: </span>
-    <input type="date" [(ngModel)]="startDateRange" />
-    <span> to </span>
-    <input type="date" [(ngModel)]="endDateRange" />
-    <button class="add-day-btn" (click)="createDateRange()" style="margin-left: 10px;">Create Date Range</button>
-  </div>
-
-  <div class="add-general-days-container" style="text-align: center; margin-bottom: 20px;">
-    <span>Or create general days: Day</span>
-    <input
-      type="number"
-      [(ngModel)]="generalDayStart"
-      min="1"
-      style="width: 60px; padding: 6px; border-radius: 4px; border: 1px solid #ccc;"
-    />
-    <span>to Day</span>
-    <input
-      type="number"
-      [(ngModel)]="generalDayEnd"
-      min="1"
-      style="width: 60px; padding: 6px; border-radius: 4px; border: 1px solid #ccc;"
-    />
-    <button class="add-day-btn" (click)="createGeneralDayRange()" style="margin-left: 10px;">Create Days</button>
-  </div>
-
-  <div class="create-ai-trip-container" style="text-align: center; margin-bottom: 20px;">
-    <input
-      type="text"
-      [(ngModel)]="aiTripLocation"
-      placeholder="Location (required)"
-      style="padding: 8px; border-radius: 4px; border: 1px solid #ccc; width: 200px;"
-    />
-    <button class="add-day-btn" (click)="createAITrip()" style="margin-left: 10px;">
-      Create AI Trip
-    </button>
-    @if (isCreatingAITrip) {
-      <div style="margin-top: 10px;">
-        <div class="spinner-small" style="display: inline-block;"></div>
-        <span>AI is planning your whole trip...</span>
+      <input type="text" [(ngModel)]="editTripNameValue" class="edit-trip-name-input" />
+      <div class="edit-trip-btn-row">
+        <button class="save-btn" (click)="saveEditTripName()">Save</button>
+        <button class="cancel-btn" (click)="cancelEditTripName()">Cancel</button>
       </div>
     }
+  </div>
+
+  <div class="add-options-card">
+    <p class="add-options-label">Add Days to Your Trip</p>
+
+    <div class="add-day-container">
+      <input type="date" [(ngModel)]="selectedDate" />
+      <button class="add-day-btn" (click)="addDay()">+ Add New Day</button>
+    </div>
+
+    <div class="add-options-divider"></div>
+    <div class="add-date-range-container" style="text-align: center; margin-bottom: 20px;">
+      <span><b>Or create a date range: </b></span>
+      <input type="date" [(ngModel)]="startDateRange" />
+      <span> to </span>
+      <input type="date" [(ngModel)]="endDateRange" />
+      <button class="add-day-btn" (click)="createDateRange()" style="margin-left: 10px;">Create Date Range</button>
+    </div>
+
+    <div class="add-options-divider"></div>
+    <div class="add-general-days-container" style="text-align: center; margin-bottom: 20px;">
+      <span><b>Or create general days: Day</b></span>
+      <input
+        type="number"
+        [(ngModel)]="generalDayStart"
+        min="1"
+        style="width: 60px; padding: 6px; border-radius: 4px; border: 1px solid #ccc;"
+      />
+      <span><b>to Day</b></span>
+      <input
+        type="number"
+        [(ngModel)]="generalDayEnd"
+        min="1"
+        style="width: 60px; padding: 6px; border-radius: 4px; border: 1px solid #ccc;"
+      />
+      <button class="add-day-btn" (click)="createGeneralDayRange()" style="margin-left: 10px;">Create Days</button>
+    </div>
+
+    <div class="add-options-divider"></div>
+    <div class="create-ai-trip-container" style="text-align: center; margin-bottom: 20px;">
+      <input
+        type="text"
+        [(ngModel)]="aiTripLocation"
+        placeholder="Location (required)"
+        style="padding: 8px; border-radius: 4px; border: 1px solid #ccc; width: 200px;"
+      />
+      <button class="add-day-btn" (click)="createAITrip()" style="margin-left: 10px;">
+        Create AI Trip
+      </button>
+      @if (isCreatingAITrip) {
+        <div style="margin-top: 10px;">
+          <div class="spinner-small" style="display: inline-block;"></div>
+          <span>AI is planning your whole trip...</span>
+        </div>
+      }
+    </div>
   </div>
 
   <div style="text-align:center; margin-bottom: 16px;">
@@ -127,6 +134,10 @@
     @if (days.length === 0) {
       <p style="text-align: center; margin-top: 20px; color: #666; width: 100%;">No days planned yet.</p>
     }
+  </div>
+
+  <div class="back-trip-row" style="text-align: center; margin-top: 30px; padding-bottom: 20px;">
+    <button class="back-btn" (click)="backToTrips()">Back to Trips</button>
   </div>
 }
 
