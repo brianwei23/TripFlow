@@ -121,7 +121,8 @@ def analyze_day():
                         "role": "user", "content": prompt
                     }
                 ]
-            }
+            },
+            timeout=110
         )
         result = response.json()
         ai_message = result["choices"][0]["message"]["content"]
@@ -176,7 +177,8 @@ def autofill_day():
                 "messages": [
                     {"role": "user", "content": prompt}
                 ]
-            }
+            },
+            timeout=110
         )
 
         if response.status_code != 200:
