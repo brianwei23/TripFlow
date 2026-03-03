@@ -149,22 +149,27 @@ def autofill_day():
         "X-Title": "TripFlow"
     }
 
+    existing_raw = data.get('existingActivities', [])
+    existing_names = [act.get('name', '') for act in existing_raw if act.get('name')]
+
     prompt = f"""
-    Task: Fill these empty time slots with travel activities.
+    Task: Fill these empty time slots with travel activities. Make it so that it fills MOST of the day between 7AM and 9PM.
     {location_instruction}
     Empty Slots: {data.get('emptySlots')}
-    Existing Activities: {data.get('existingActivities')}
-    Return EXACTLY VALID JSON. This means no markdown and no conversation.
-    Start times must be in the time slot it's in. End times must be after start times but don't have to be in the time slot in question.
-    Be a bit specific on activity locations and names. For example, you can include city name, state/province, or country in location. 
-    Create accurate latitute and longitude coordinates for each location, and put it in the 'coords' object.
-    DO NOT make new activities that are already existing in the existing activities list.
-    DO NOT MAKE ANY REPEAT ACTIVITIES AT SAME LANDMARK!!! THERE ARE NO EXCEPTIONS TO THIS RULE.
-    Make sure the schedule flows perfectly and is feasible. Make sure locations and landmarks are real. All costs are in USD.
+    ALREADY VISITED LOCATIONS: {existing_names}
+
+    1. You can only return activities between 7 AM and 9 PM. Fill in the entire day during that period. 6-9 activities each day.
+    2. DO NOT suggest any landmarks or points of interest listed in the ALREADY VISITED LOCATIONS above. Pick entirely different areas/attractions
+    to ensure variety. You can consider activities in nearby surrounding areas too.
+    3. Return EXACTLY VALID JSON. This means no markdown and no conversation.
+    4. Be a bit specific on activity locations and names. For example, you can include city name, state/province, or country in location. 
+    Location must also include the name of the point of interest.
+    5. Create ACCURATE latitute and longitude coordinates for each location, and put it in the 'coords' object.
+    6. Make sure the schedule flows perfectly and is feasible. Make sure locations and landmarks are real. All costs are in USD.
     Example format:
     {{
         "activities": [
-            {{ "name": "Lunch at Disneyland", "start": "11:00", "end": "12:00", "expectedCost": 40, "location": "Disneyland Anaheim", "coords": {{"lat": 43.2943, -203.4829}}}}
+            {{ "name": "Lunch at Disneyland", "start": "11:00", "end": "12:00", "expectedCost": 40, "location": "Disneyland Anaheim", "coords": {{"lat": 43.2943, "lng": -203.4829}}}}
         ]
     }}
     """

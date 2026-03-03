@@ -45,7 +45,7 @@
 @if (viewMode === 'days') {
   <div class="days-header">
     @if (!isEditingTripName) {
-      <h2>{{selectedTrip?.name}} - Calendar</h2>
+      <h2>{{selectedTrip?.name}}</h2>
       <div class="header-actions"> <button class="edit-btn" (click)="startEditTripName()">Edit Trip</button>
         <button
           class="delete-trip-btn"
@@ -248,6 +248,11 @@
                 <button class="weather-btn" (click)="openWeather(day, act.coords)">
                   ☀️ Weather
                 </button>
+                @if (act.location) {
+                  <button class="maps-redirect-btn" (click)="openInGoogleMaps(act)">
+                    📍 Details
+                  </button>
+                }
                 <div>
                   <button class="edit-btn" (click)="editActivity(act)">Edit</button>
                   <button class="delete-btn" (click)="deleteActivity(day, act)">Delete</button>

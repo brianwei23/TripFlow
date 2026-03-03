@@ -286,7 +286,7 @@ h3 {
     transition: background-color 0.3s;
     position: fixed;
     top: 20px;
-    right: 20px;
+    right: 140px;
     z-index: 1000;
     opacity: 0.5;
 }
@@ -522,6 +522,8 @@ h3 {
     font-size: 20px;
     color: white;
     opacity: 0.47;
+    width: 120px;
+    align-self: center;
 }
 
 .day-summary {
@@ -587,7 +589,10 @@ h3 {
     top: 110%;
     left: 0;
     width: 420px;
-    max-height: 400px;
+    width: 90vw;
+    max-width: 800px;
+    min-height: 400px;
+    max-height: 900px;
     background: white;
     border-radius: 10px;
     border: 2px solid #3498db;
@@ -753,4 +758,20 @@ h3 {
 .trip-date-range--empty {
     color: #aaa;
     font-style: italic;
+}
+
+.maps-redirect-btn {
+    background-color: #4285F4;
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-top: 5px;
+    transition: background-color 0.2s;
+    width: 120px;
+    height: 65px;
+    font-size: 22px;
+    align-self: center;
+    opacity: 0.47;
 }

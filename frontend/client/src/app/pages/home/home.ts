@@ -229,7 +229,19 @@ export class HomeComponent {
     await Promise.all(trips.map(async (trip) => {
       const daysCol = collection(this.firestore, 'users', uid, 'trips', trip.id, 'days');
       const daysSnap = await getDocs(daysCol);
-      const dates = daysSnap.docs.map(d => d.id).sort();
+      const dates = daysSnap.docs
+        .map(d => d.id) 
+        .sort((a, b) => {
+          const aIsGeneral = a.startsWith('general-');
+          const bIsGeneral = b.startsWith('general-');
+
+          if (aIsGeneral && bIsGeneral) {
+            const aNum = Number(a.replace('general-', ''));
+            const bNum = Number(b.replace('general-', ''));
+            return aNum - bNum;
+          }
+          return a.localeCompare(b);
+        })
       trip.dateRange = dates.length > 0 ? {start: dates[0], end: dates[dates.length - 1]} : null;
     }));
     this.trips = trips;
@@ -311,6 +323,8 @@ export class HomeComponent {
     await this.loadTrips();
     window.history.replaceState({}, '', '/home');
     Promise.resolve().then(() => this.cdr.detectChanges());
+
+    window.scrollTo(0, 0);
   }
 
   async backToDays() {
@@ -322,6 +336,8 @@ export class HomeComponent {
       window.history.replaceState({}, '', '/home?tripId=' + this.selectedTrip.id);
     } 
     this.cdr.detectChanges();
+
+    window.scrollTo(0, 0);
   }
 
 
@@ -373,11 +389,12 @@ export class HomeComponent {
 
 
   toggleSortRecent() {
-    if (this.sortRecentFirst) {
-      this.days.sort((a, b) => b.date.localeCompare(a.date)); //Most recent first
-    } else {
-      this.days.sort((a, b) => a.date.localeCompare(b.date)); //Oldest first
-    }
+    const sorted = [...this.days].sort((a, b) => {
+      const result = this.sortDayDates(a, b);
+      return this.sortRecentFirst ? -result : result;
+    });
+    this.days = sorted;
+    this.cdr.detectChanges();
   }
 
 
@@ -554,10 +571,27 @@ export class HomeComponent {
       return;
     }
     await Promise.all(savePromises);
-    this.toggleSortRecent();
+    this.days.sort((a, b) => this.sortDayDates(a, b));
     this.generalDayStart = null;
     this.generalDayEnd = null;
     this.cdr.detectChanges();
+  }
+
+  private sortDayDates(a: DayPlan, b: DayPlan): number {
+    const aIsGeneral = a.date.startsWith('general-');
+    const bIsGeneral = b.date.startsWith('general-');
+
+    if (aIsGeneral && bIsGeneral) {
+      const aNum = Number(a.date.replace('general-', ''));
+      const bNum = Number(b.date.replace('general-', ''));
+      return aNum - bNum;
+    }
+
+    if (!aIsGeneral && !bIsGeneral) {
+      return a.date.localeCompare(b.date);
+    }
+    
+    return aIsGeneral ? 1 : -1;
   }
 
 
@@ -622,7 +656,10 @@ export class HomeComponent {
         tempActivity: { name: '', start: '', end: '', expectedCost: undefined, actualCost: null }
       } as DayPlan;
     })
-    .sort((a, b) => a.date.localeCompare(b.date));
+    .sort((a, b) => {
+      const result = this.sortDayDates(a, b);
+      return this.sortRecentFirst ? -result : result;
+    });
 
    this.firstDayAdded = this.days.length > 0;
    this.cdr.detectChanges();
@@ -647,6 +684,8 @@ export class HomeComponent {
     this.viewMode = 'day-detail';
     window.history.replaceState({}, '', `/day/${date}?tripId=${this.selectedTrip?.id}`);
     this.cdr.detectChanges();
+
+    window.scrollTo(0, 0);
   }
 
 
@@ -671,6 +710,20 @@ export class HomeComponent {
         tempActivity: day.tempActivity
       }
     });
+  }
+
+  openInGoogleMaps(act: any) {
+    let url = '';
+
+    if (act.location) {
+      url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(act.location)}`;  
+    }
+    else if (act.coords && act.coords.lat && act.coords.lng) {
+      url = `https://www.google.com/maps/search/?api=1&query=${act.coords.lat},${act.coords.lng}`;
+    }
+    if (url) {
+      window.open(url, '_blank');
+    }
   }
 
   toggleAddForm(day: DayPlan) {
@@ -940,12 +993,19 @@ export class HomeComponent {
     this.isAutofilling = true;
     this.cdr.detectChanges();
 
+    const allTripActivities: Activity[] = [];
+    this.days.forEach(d => {
+      if (d.activities) {
+        allTripActivities.push(...d.activities);
+      }
+    });
+
     const payload = {
-      existingActivities: this.getAllActivities(day),
+      existingActivities: allTripActivities,
       emptySlots,
-      dayStart: "00:00",
-      dayEnd: "23:59",
-      locationContext: this.autofillLocation
+      dayStart: "08:00",
+      dayEnd: "21:00",
+      locationContext: this.autofillLocation || this.selectedTrip?.name
     };
 
     try {
@@ -960,12 +1020,22 @@ export class HomeComponent {
         throw new Error("Invalid AI format");
       }
 
-      const newActivities = parsed.activities.slice(0, 4);
+      const newActivities = parsed.activities;
       let addedCount = 0;
       for (const act of newActivities) {
         if (act.name && act.start && act.end) {
-          this.insertAIActivity(day, act);
-          addedCount++;
+          const isGlobalDuplicate = allTripActivities.some(existing => {
+            const existingName = (existing.name || '').toLowerCase();
+            const newName = act.name.toLowerCase();
+            return existingName.includes(newName) || newName.includes(existingName);
+          });
+          if (!isGlobalDuplicate) {
+            this.insertAIActivity(day, act);
+            allTripActivities.push(act);
+            addedCount++;
+          } else {
+            console.warn(`Blocked duplicate place: ${act.name}`);
+          }
         }
       }
       if (addedCount > 0) {
@@ -991,23 +1061,28 @@ export class HomeComponent {
     }
     if (this.days.length === 0) {
       alert('Please add at least one day to the trip first before proceeding.');
+      return;
     }
     this.isCreatingAITrip = true;
     this.cdr.detectChanges();
 
     try {
+      let allTripActivities: any[] = [];
+
       for (const day of this.days) {
         // Load entire day from Firebase to get existing activities
         const loadedDay = await this.loadDayFromFirebase(day.date);
         const existingActivities = loadedDay?.activities ?? [];
 
-        const emptySlots = [{ start: '00:00', end: '23:59' }];
+        allTripActivities = [...allTripActivities, ...existingActivities];
+
+        const emptySlots = [{ start: '08:00', end: '21:00' }];
 
         const payload = {
-          existingActivities,
+          existingActivities: allTripActivities,
           emptySlots,
-          dayStart: '00:00',
-          dayEnd: '23:59',
+          dayStart: '08:00',
+          dayEnd: '21:00',
           locationContext: this.aiTripLocation.trim()
         };
 
@@ -1023,10 +1098,22 @@ export class HomeComponent {
 
           day.activities = existingActivities;
 
-          const newActivities = parsed.activities.slice(0, 4);
+          const newActivities = parsed.activities;
+
           for (const act of newActivities) {
             if (act.name && act.start && act.end) {
-              this.insertAIActivity(day, act);
+              const isGlobalDuplicate = allTripActivities.some(existing => {
+                const existingName = (existing.name || '').toLowerCase();
+                const newName = act.name.toLowerCase();
+                return existingName.includes(newName) || newName.includes(existingName);
+              });
+
+              if (!isGlobalDuplicate) {
+                this.insertAIActivity(day, act);
+                allTripActivities.push(act);
+              } else {
+                console.warn(`Caught and blocked an AI repeat: ${act.name}`);
+              }
             }
           }
           await this.saveDayToFirebase(day);
@@ -1045,8 +1132,7 @@ export class HomeComponent {
   insertAIActivity(day: DayPlan, aiActivity: any) {
     const allExisting = this.getAllActivities(day);
     const isDuplicate = allExisting.some(existing => 
-      existing.name.toLowerCase() === aiActivity.name.toLowerCase() ||
-      existing.start === aiActivity.start
+      existing.name.toLowerCase() === aiActivity.name.toLowerCase()
     );
     if (isDuplicate) {
       console.log(`Skipping duplicate AI activity: ${aiActivity.name}`);
@@ -1149,8 +1235,6 @@ export class HomeComponent {
       } else {
         setTimeout(() => this.cdr.detectChanges(), 0);
       }
-      alert('Trip and associated data has been deleted.');
-
       alert('Trip and associated data has been deleted.');
     } catch (error) {
       console.error("Error deleting trip:", error);
