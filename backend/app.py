@@ -187,6 +187,7 @@ def autofill_day():
         )
 
         if response.status_code != 200:
+            print(f"OpenRouter error {response.status_code}: {response.text}")
             return jsonify({"error": f"AI Provider Error: {response.status_code}"}), 500
 
         result = response.json()

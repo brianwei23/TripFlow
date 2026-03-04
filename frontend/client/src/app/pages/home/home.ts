@@ -1072,8 +1072,15 @@ export class HomeComponent {
 
     try {
       let allTripActivities: any[] = [];
+      const failedDays: string[] = [];
 
-      for (const day of this.days) {
+      for (let i = 0; i < this.days.length; i++) {
+        const day = this.days[i];
+
+        if (i > 0) {
+          await new Promise(resolve => setTimeout(resolve, 5000));
+        }
+
         // Load entire day from Firebase to get existing activities
         const loadedDay = await this.loadDayFromFirebase(day.date);
         const existingActivities = loadedDay?.activities ?? [];
@@ -1090,21 +1097,23 @@ export class HomeComponent {
           locationContext: this.aiTripLocation.trim()
         };
 
-        try {
-          const response = await this.aiService.autofillDay(payload);
-          let cleanJson = response.result;
-          if (typeof cleanJson === 'string') {
-            cleanJson = cleanJson.replace(/```json/g, '').replace(/```/g, '').trim();
-          }
-          const parsed = JSON.parse(cleanJson);
+        let success = false;
+        let retryDelay = 10000;
 
-          if (!parsed.activities || !Array.isArray(parsed.activities)) continue;
+        for (let attempt = 1; attempt <= 3 && !success; attempt++) {
+          try {
+            const response = await this.aiService.autofillDay(payload);
+            let cleanJson = response.result;
+            if (typeof cleanJson === 'string') {
+              cleanJson = cleanJson.replace(/```json/g, '').replace(/```/g, '').trim();
+            }
+            const parsed = JSON.parse(cleanJson);
+
+            if (!parsed.activities || !Array.isArray(parsed.activities)) break;
 
           day.activities = existingActivities;
 
-          const newActivities = parsed.activities;
-
-          for (const act of newActivities) {
+          for (const act of parsed.activities) {
             if (act.name && act.start && act.end) {
               const isGlobalDuplicate = allTripActivities.some(existing => {
                 const existingName = (existing.name || '').toLowerCase();
@@ -1121,15 +1130,28 @@ export class HomeComponent {
             }
           }
           await this.saveDayToFirebase(day);
+          success = true;
         } catch (err) {
-          console.error(`Failed to autofill day ${day.date}:`, err);
+          console.error(`Attempt ${attempt} failed for day ${day.date}:`, err);
+          if (attempt < 3) {
+            await new Promise(resolve => setTimeout(resolve, retryDelay));
+            retryDelay *= 2;
+          }
         }
       }
-      this.aiTripLocation = '';
+      if (!success) {
+        failedDays.push(this.formatDayLabel(day.date));
+      }
+    }
+    this.aiTripLocation = '';
+    if (failedDays.length > 0) {
+      alert(`AI Trip creation complete! However, these days could not be filled and will need to be autofilled manually:\n${failedDays.join('\n')}`);
+    } else {
       alert('AI Trip creation complete!');
-    } finally {
-      this.isCreatingAITrip = false;
-      this.cdr.detectChanges();
+    }
+  } finally {
+    this.isCreatingAITrip = false;
+    this.cdr.detectChanges();
     }
   }
 
@@ -1342,5 +1364,11 @@ export class HomeComponent {
       doHour: '10', doMinute: '0',
     });
     window.open(`https://cars.booking.com/search-results?${params.toString()}`, '_blank');
+  }
+
+  findAttractions() {
+    const city = this.bookingCity.trim();
+    if (!city) { alert('Please enter a city.'); return; }
+    window.open(`https://www.getyourguide.com/s/?q=${encodeURIComponent(city)}`, '_blank');
   }
 }

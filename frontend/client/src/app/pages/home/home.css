@@ -860,6 +860,19 @@ h3 {
     transition: background-color 0.3s;
 }
 
+.attractions-btn {
+    padding: 8px 16px;
+    background-color: #538f18;
+    color: white;
+    font-weight: bold;
+    font-size: 22px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    opacity: 0.4;
+    transition: background-color 0.3s;
+}
+
 .header-actions {
     margin-left: 30px;
 }
