@@ -46,13 +46,19 @@
   <div class="days-header">
     @if (!isEditingTripName) {
       <h2>{{selectedTrip?.name}}</h2>
-      <div class="header-actions"> <button class="edit-btn" (click)="startEditTripName()">Edit Trip</button>
+      <div class="header-actions"> 
+        <button class="edit-btn" (click)="startEditTripName()">Edit Trip</button>
         <button
           class="delete-trip-btn"
           (click)="deleteTrip(selectedTrip!, $event)" >
           Delete Trip
         </button>
       </div>
+      <div class="flights-container">
+        <input type="text" [(ngModel)]="flightDepartureCity" placeholder="Departure city" class="flight-city-input" />
+        <input type="text" [(ngModel)]="flightDestinationCity" placeholder="Destination city" class="flight-city-input" />
+      </div>
+      <button class="find-flights-btn" (click)="findFlights()">Find Flights</button>
     } @else {
       <input type="text" [(ngModel)]="editTripNameValue" class="edit-trip-name-input" />
       <div class="edit-trip-btn-row">
@@ -207,6 +213,14 @@
         </div>
       }
 
+      <div class="booking-row">
+        <input type="text" [(ngModel)]="bookingCity" placeholder="City" class="booking-city-input" />
+        <div class="booking-buttons">
+          <button class="hotels-btn" (click)="findHotels()">Hotels</button>
+          <button class="car-rentals-btn" (click)="findCarRentals()">Car Rentals</button>
+        </div>
+      </div>
+
       <div class="add-activity-wrapper">
         @if (!day.isEditingNew) {
           <button class="add-activity-btn" (click)="toggleAddForm(day)">
@@ -245,14 +259,16 @@
                     <b>Actual Cost:</b> ${{act.actualCost}}
                   }
                 </span>
-                <button class="weather-btn" (click)="openWeather(day, act.coords)">
-                  ☀️ Weather
-                </button>
-                @if (act.location) {
-                  <button class="maps-redirect-btn" (click)="openInGoogleMaps(act)">
-                    📍 Details
+                <div style="display: flex; gap: 80x; align-items: stretch; justify-content: center; gap: 20px;">
+                  <button class="weather-btn" (click)="openWeather(day, act.coords)">
+                    ☀️ Weather
                   </button>
-                }
+                  @if (act.location) {
+                    <button class="maps-redirect-btn" (click)="openInGoogleMaps(act)">
+                      📍 Details
+                    </button>
+                  }
+                </div>
                 <div>
                   <button class="edit-btn" (click)="editActivity(act)">Edit</button>
                   <button class="delete-btn" (click)="deleteActivity(day, act)">Delete</button>

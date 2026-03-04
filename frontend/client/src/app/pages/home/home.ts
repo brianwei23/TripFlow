@@ -110,6 +110,10 @@ export class HomeComponent {
   isEditingDayDate = false;
   editDayDateValue = '';
 
+  flightDepartureCity: string = '';
+  flightDestinationCity: string = '';
+  bookingCity: string = '';
+
   ngOnInit() {
     this.route.params.subscribe(async params => {
       const dateParam = params['date'];
@@ -1281,5 +1285,62 @@ export class HomeComponent {
     this.isEditingDayDate = false;
     window.history.replaceState({}, '', `/day/${newDate}?tripId=${this.selectedTrip?.id}`);
     this.cdr.detectChanges();
+  }
+
+  findFlights() {
+    const origin = this.flightDepartureCity.trim();
+    const destination = this.flightDestinationCity.trim();
+    if (!origin || !destination) {
+      alert('Please enter both departure and destination cities.');
+      return;
+    }
+    const url = `https://www.google.com/travel/flights?q=flights+from+${encodeURIComponent(origin)}+to+${encodeURIComponent(destination)}`;
+    window.open(url, '_blank');
+  }
+
+  findHotels() {
+    const city = this.bookingCity.trim();
+    if (!city) { alert('Please enter a city.'); return; }
+    window.open(`https://www.booking.com/searchresults.html?ss=${encodeURIComponent(city)}`, '_blank');
+  }
+
+  async findCarRentals() {
+    const city = this.bookingCity.trim();
+    if (!city) { alert('Please enter a city.'); return; }
+
+    const geo = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=1`);
+    const geoDate = await geo.json();
+
+    if (!geoDate.results?.length) {
+      alert('City not found. Please try a different city name.');
+      return;
+    }
+
+    const { latitude, longitude } = geoDate.results[0];
+
+
+    const pickup = new Date();
+    pickup.setDate(pickup.getDate() + 7);
+    const dropoff = new Date();
+    dropoff.setDate(dropoff.getDate() + 10);
+
+    const params = new URLSearchParams({
+      locationName: city,
+      dropLocationName: city,
+      coordinates: `${latitude},${longitude}`,
+      dropCoordinates: `${latitude},${longitude}`,
+      driversAge: '30',
+      ftsType: 'C',
+      dropsFtsType: 'C',
+      puDay: String(pickup.getDate()),
+      puMonth: String(pickup.getMonth() + 1),
+      puYear: String(pickup.getFullYear()),
+      puHour: '10', puMinute: '0',
+      doDay: String(dropoff.getDate()),
+      doMonth: String(dropoff.getMonth() + 1),
+      doYear: String(dropoff.getFullYear()),
+      doHour: '10', doMinute: '0',
+    });
+    window.open(`https://cars.booking.com/search-results?${params.toString()}`, '_blank');
   }
 }
