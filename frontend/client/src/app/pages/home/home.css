@@ -571,7 +571,7 @@ h3 {
     border-radius: 25px;
     border: none;
     font-size: 24px;
-    background: #3498db;
+    background: #538f18;
     color: white;
     cursor: pointer;
     font-weight: 600;
@@ -834,9 +834,75 @@ h3 {
     margin-top: 20px;
 }
 
+.booking-popup-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.booking-popup {
+    background: #fff;
+    border-radius: 12px;
+    width: 340px;
+    max-width: 90vw;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+    overflow: hidden;
+}
+
+.booking-popup-header {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 14px 18px;
+    background: #f5f5f5;
+    font-weight: 600;
+    font-size: 20px;
+    border-bottom: 1px solid #e0e0e0;
+    position: relative;
+}
+
+.booking-popup-header .close-btn-x {
+    position: absolute;
+    right: 18px;
+}
+
+.booking-popup-body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 24px 18px 20px;
+    gap: 16px;
+}
+
+.booking-popup-hint {
+    font-size: 18px;
+    font-weight: 500;
+    color: #666;
+    margin: 0;
+}
+
+.booking-qr {
+    width: 200px;
+    height: 200px;
+    border-radius: 8px;
+    border: 1px solid #e0e0e0;
+}
+
+.booking-popup-link {
+    font-size: 16px;
+    color: #1a73e8;
+    word-break: break-all;
+    text-align: center;
+    text-decoration: underline;
+}
+
 .hotels-btn {
     padding: 8px 16px;
-    background-color: #003580;
+    background-color: #538f18;
     color: white;
     font-weight: bold;
     font-size: 22px;
@@ -849,7 +915,7 @@ h3 {
 
 .car-rentals-btn {
     padding: 8px 16px;
-    background-color: #007f5f;
+    background-color: #538f18;
     color: white;
     font-weight: bold;
     font-size: 22px;

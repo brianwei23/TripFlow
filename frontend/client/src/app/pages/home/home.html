@@ -308,6 +308,24 @@
   }
 }
 
+@if (showBookingPopup) {
+  <div class="booking-popup-overlay" (click)="closeBookingPopup()">
+    <div class="booking-popup" (click)="$event.stopPropagation()">
+      <div class="booking-popup-header">
+        <span>{{bookingPopupTitle}}</span>
+      </div>
+      <div class="booking-popup-body">
+        <p class="booking-popup-hint">Scan QR code or click the link below.</p>
+        <img class="booking-qr" [src]="getQrCodeUrl(bookingPopupUrl)" alt="QR Code" />
+        <a class="booking-popup-link" [href]="bookingPopupUrl" target="_blank" rel="noopener">
+          {{bookingPopupUrl}}
+        </a>
+        <button class="cancel-btn" (click)="closeBookingPopup()">Close</button>
+      </div>
+    </div>
+  </div>
+}
+
 @if (showWeatherPopup) {
   <app-weather
     [weatherData]="weatherData"

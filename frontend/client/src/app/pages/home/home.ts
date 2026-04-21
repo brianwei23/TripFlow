@@ -113,6 +113,9 @@ export class HomeComponent {
   flightDepartureCity: string = '';
   flightDestinationCity: string = '';
   bookingCity: string = '';
+  showBookingPopup: boolean = false;
+  bookingPopupTitle: string = '';
+  bookingPopupUrl: string = '';
 
   ngOnInit() {
     this.route.params.subscribe(async params => {
@@ -1309,6 +1312,33 @@ export class HomeComponent {
     this.cdr.detectChanges();
   }
 
+  openBookingPopup(title: string, url: string) {
+    this.bookingPopupTitle = title;
+    this.bookingPopupUrl = url;
+    this.showBookingPopup = true;
+    this.cdr.detectChanges();
+  }
+
+  closeBookingPopup() {
+    this.showBookingPopup = false;
+    this.cdr.detectChanges();
+  }
+
+  getQrCodeUrl(url: string): string {
+    const qrSafeUrl = url.replace(/%20/g, '+');
+    return `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrSafeUrl)}`;
+  }
+
+  async shortenUrl(url: string): Promise<string> {
+    try {
+      const response = await fetch(`https://tinyurl.com/api-create.php?url=${encodeURIComponent(url)}`);
+      const shortened = await response.text();
+      return shortened;
+    } catch {
+      return url;
+    }
+  }
+
   findFlights() {
     const origin = this.flightDepartureCity.trim();
     const destination = this.flightDestinationCity.trim();
@@ -1317,13 +1347,14 @@ export class HomeComponent {
       return;
     }
     const url = `https://www.google.com/travel/flights?q=flights+from+${encodeURIComponent(origin)}+to+${encodeURIComponent(destination)}`;
-    window.open(url, '_blank');
+    this.openBookingPopup(`Flights: ${origin} → ${destination}`, url);
   }
 
   findHotels() {
     const city = this.bookingCity.trim();
     if (!city) { alert('Please enter a city.'); return; }
-    window.open(`https://www.booking.com/searchresults.html?ss=${encodeURIComponent(city)}`, '_blank');
+    const url = `https://www.booking.com/searchresults.html?ss=${encodeURIComponent(city)}`;
+    this.openBookingPopup(`Hotels in ${city}`, url);
   }
 
   async findCarRentals() {
@@ -1363,12 +1394,15 @@ export class HomeComponent {
       doYear: String(dropoff.getFullYear()),
       doHour: '10', doMinute: '0',
     });
-    window.open(`https://cars.booking.com/search-results?${params.toString()}`, '_blank');
+    const url = `https://cars.booking.com/search-results?${params.toString()}`;
+    const shortUrl = await this.shortenUrl(url);
+    this.openBookingPopup(`Car Rentals in ${city}`, shortUrl);
   }
 
   findAttractions() {
     const city = this.bookingCity.trim();
     if (!city) { alert('Please enter a city.'); return; }
-    window.open(`https://www.getyourguide.com/s/?q=${encodeURIComponent(city)}`, '_blank');
+    const url = `https://www.getyourguide.com/s/?q=${encodeURIComponent(city)}`;
+    this.openBookingPopup(`Attractions in ${city}`, url);
   }
 }
