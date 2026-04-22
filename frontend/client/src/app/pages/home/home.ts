@@ -347,6 +347,36 @@ export class HomeComponent {
     window.scrollTo(0, 0);
   }
 
+  async openTripMap() {
+    const uid = this.auth.uid;
+    if (!uid || !this.selectedTrip) return;
+
+    const daysCol = collection(this.firestore, 'users', uid, 'trips', this.selectedTrip.id, 'days');
+    const snap = await getDocs(daysCol);
+    const allDays: DayPlan[] = snap.docs
+      .map(d => d.data() as PersistedDayPlan)
+      .map(d => ({ ...d, activities: d.activities ?? [] }))
+      .sort((a, b) => {
+        const aIsGeneral = a.date.startsWith('general-');
+        const bIsGeneral = b.date.startsWith('general-');
+        if (aIsGeneral && bIsGeneral) {
+          return Number(a.date.replace('general-', '')) - Number(b.date.replace('general-', ''));
+        }
+        if (aIsGeneral && !bIsGeneral) return 1;
+        if (!aIsGeneral && bIsGeneral) return -1;
+        return a.date.localeCompare(b.date);
+      });
+
+    this.router.navigate(['/trip-map'], {
+      queryParams: { tripId: this.selectedTrip.id },
+      state: {
+        tripName: this.selectedTrip.name,
+        tripId: this.selectedTrip.id,
+        days: allDays
+      }
+    });
+  }
+
 
   async saveDayToFirebase(day: DayPlan) {
     const uid = this.auth.uid;

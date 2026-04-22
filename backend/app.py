@@ -166,6 +166,7 @@ def autofill_day():
     Location must also include the name of the point of interest.
     5. Create ACCURATE latitute and longitude coordinates for each location, and put it in the 'coords' object.
     6. Make sure the schedule flows perfectly and is feasible. Make sure locations and landmarks are real. All costs are in USD.
+    7. Make sure to suggest points of interest in various areas in the location provided and not to focus only on one city/area. For example, if Australia is the location, it should contain activities in Sydney, Darwin, Perth, Melbourne, etc.
     Example format:
     {{
         "activities": [

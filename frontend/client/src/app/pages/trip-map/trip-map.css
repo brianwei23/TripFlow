@@ -1,0 +1,44 @@
+:host {
+    display: block;
+}
+
+.trip-map-header {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 14px 20px;
+    background: #fff;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.map-back-btn {
+    position: absolute;
+    left: 20px;
+    background: #2563eb;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 18px;
+    font-size: 24px;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    transition: background 0.2s;
+}
+
+.map-back-btn:hover {
+    background: #1d4ed8;
+}
+
+.trip-map-title {
+    font-size: 35px;
+    font-weight: 700;
+    margin: 0;
+    text-align: center;
+}
+
+#trip-map {
+    width: 100%;
+    height: calc(100vh - 70px);
+}

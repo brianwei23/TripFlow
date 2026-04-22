@@ -131,6 +131,10 @@
     </label>
   </div>
 
+  <div style="text-align:center; margin-bottom: 16px;">
+    <button class="add-day-btn" (click)="openTripMap()">View Trip Map</button>
+  </div>
+
   <div class="days-container">
     @for (day of days; track day.date) {
       <div class="day-tile" (click)="goToDay(day.date)">
@@ -233,6 +237,7 @@
       @if (day.isEditingNew) {
         <div class="activity-form" style="margin: 0 auto;">
           <input type="text" placeholder="Activity" [(ngModel)]="day.tempActivity!.name" />
+          <small style="color:#666; font-size:15px;">For trip map and weather features to work properly, locations must be created through the map or through AI autofill.</small>
           <input type="text" placeholder="Location" [(ngModel)]="day.tempActivity!.location" />
           <button type="button" class="map-btn" (click)="openMapForNewActivity(day)">Pick Location (Map)</button>
           <input type="time" [(ngModel)]="day.tempActivity!.start" />
@@ -277,6 +282,7 @@
               }
               @else {
                 <input type="text" [(ngModel)]="act.temp!.name" placeholder="Activity" />
+                <small style="color:#666; font-size:15px;">For trip map and weather features to work properly, locations must be created through the map or through AI autofill.</small>
                 <input type="text" [(ngModel)]="act.temp!.location" placeholder="Location" />
                 <button type="button" class="map-btn" (click)="openMapForActivity(act)">Pick Location (Map)</button>
                 <input type="time" [(ngModel)]="act.temp!.start" />
