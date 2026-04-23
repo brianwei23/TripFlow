@@ -11,8 +11,8 @@ export const routes: Routes = [
     { path: 'register', component: RegisterComponent },
     { path: 'home', component: HomeComponent, canActivate: [AuthGuard] }, // AuthGuard prevents back button usage after logout
     { path: 'day/:date', component: HomeComponent, canActivate: [AuthGuard] },
-    { path: 'map-picker', component: MapPicker},
-    { path: 'trip-map', component: TripMapComponent },
+    { path: 'map-picker', component: MapPicker, canActivate: [AuthGuard] },
+    { path: 'trip-map', component: TripMapComponent, canActivate: [AuthGuard] },
     // Default path
     { path: '', redirectTo: 'login', pathMatch: 'full' }
 ];

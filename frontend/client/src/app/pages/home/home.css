@@ -665,12 +665,24 @@ h3 {
     border-radius: 8px;
     color: #0d47a1;
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
     gap: 12px;
     font-weight: 500;
     animation: fadeIn 0.3s ease-in-out;
     font-size: 20px;
+    max-width: 600px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.ai-loading-inline span {
+    display: block;
+    width: 100%;
+    text-align: center;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
 }
 
 .spinner-small {
@@ -680,6 +692,7 @@ h3 {
     border-top: 3px solid #0d47a1;
     border-radius: 50%;
     animation: spin 1s linear infinite;
+    flex-shrink: 0;
 }
 
 .ai-response-text {
