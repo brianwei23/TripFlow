@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import * as L from 'leaflet';
 import { Router } from '@angular/router';
+import { Toast } from '../../notifications';
 
 
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -114,11 +115,17 @@ export class MapPicker implements OnInit {
         this.selectedLatLng = latlng;
         this.selectedLocationName = bestMatch.display_name || bestMatch.name || this.searchQuery;
       } else {
-        alert('Location not found.');
+        Toast.fire({
+          icon: 'error',
+          title: 'Location not found.',
+        });
       }
     } catch (error) {
       console.error('Search error:', error);
-      alert('Something is wrong with your search. Please try again.');
+      Toast.fire({
+        icon: 'error',
+        title: 'Something is wrong with your search. Please try again.',
+      });
     }
   }
 

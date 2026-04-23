@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { Router, ActivatedRoute } from '@angular/router';
 import * as L from 'leaflet';
+import { Toast } from '../../notifications';
 
 delete (L.Icon.Default.prototype as any)._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -73,7 +74,10 @@ export class TripMapComponent implements OnInit {
         }
 
         if (pins.length === 0) {
-            alert('No activities with map locations found in this trip.');
+            Toast.fire({
+                icon: 'warning',
+                title: 'No activities with map locations found in this trip.',
+            });
             return;
         }
         pins.forEach((pin: { latlng: L.LatLng; label: string; actName: string; dayUrl: string }, i: number) => {

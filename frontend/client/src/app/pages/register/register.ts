@@ -3,6 +3,8 @@ import { AuthService } from '../../services/auth.service';
 import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
+import Swal from 'sweetalert2';
+import { Toast } from '../../notifications';
 
 @Component({
   selector: 'app-register',
@@ -23,24 +25,37 @@ export class RegisterComponent {
   register() {
     // Check password strength
     if (!this.passwordRegex.test(this.password)) {
-      alert(
-        'Password must have at least 7 characters and include:\n' + '• one uppercase letter\n' + '• one lowercase letter\n' + '• one number\n' + '• one special character'
-      );
+      Toast.fire({
+        icon: 'warning',
+        title: 'Weak Password',
+        text: 'Password must have at least 7 characters and have uppercase, lowercase, numbers, and symbols.'
+      });
       return;
     }
     // Calling Firebase Auth
     this.auth.register(this.email, this.password)
       .then(() => {
-        alert('An email has been sent to your address for verification.');
+        Toast.fire({
+          icon: 'success',
+          title: 'Verification email sent!',
+        });
         this.router.navigate(['/login']);
       })
       .catch(error => {
         // Duplicate email check
         if (error.code === 'auth/email-already-in-use') {
-          alert('An account associated with this email already exists.');
+          Toast.fire({
+            icon: 'error',
+            title: 'Duplicate Email',
+            text: 'Email already used with another account.'
+          });
           return;
         }
-        alert(error.message);
+        Toast.fire({
+          icon: 'error',
+          title: 'Registration Failed',
+          text: error.message
+        });
       });
   }
 }

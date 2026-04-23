@@ -8,6 +8,8 @@ import { Firestore } from '@angular/fire/firestore';
 import { collection, doc, getDoc, getDocs, setDoc, deleteDoc } from 'firebase/firestore';
 import { WeatherComponent } from '../weather/weather';
 import { environment } from '../../../environments/environment';
+import Swal from 'sweetalert2';
+import { Toast } from '../../notifications';
 
 interface Trip {
   id: string;
@@ -277,12 +279,20 @@ export class HomeComponent {
     if (!this.newTripName.trim()) return;
     const duplicate = this.trips.some(t => t.name.toLowerCase() === this.newTripName.trim().toLowerCase());
     if (duplicate) {
-      alert('A trip with this name already exists.');
+      Toast.fire({
+        icon: 'error',
+        title: 'Duplicate Trip',
+        text: 'A trip with this name already exists.',
+      });
       return;
     }
     const uid = this.auth.uid;
     if (!uid) {
-      alert('You need to be logged in to create a trip.');
+      Toast.fire({
+        icon: 'error',
+        title: 'Authorization Error',
+        text: 'You need to be logged in to create a trip.'
+      });
       return;
     }
     try {
@@ -297,7 +307,11 @@ export class HomeComponent {
       this.cdr.detectChanges();
   } catch (err) {
     console.error('Failed to create trip:', err);
-    alert('Failed the create trip. Please try again.');
+    Toast.fire({
+      icon: 'error',
+      title: 'Trip Creation Failure',
+      text: 'Failed to create trip. Please try again.'
+    });
   }
 }
 
@@ -469,15 +483,24 @@ export class HomeComponent {
     const temp = act.temp;
     if (!temp) return;
     if (!temp.name || !temp.start || !temp.end || temp.expectedCost == undefined || temp.expectedCost == null) {
-      alert('Activity name, times, and expected cost must be filled.');
+      Toast.fire({
+        icon: 'error',
+        title: 'Activity name, times, and expected cost must be filled.'
+      });
       return;
     }
     if (temp.expectedCost < 0 || (temp.actualCost != null && temp.actualCost < 0)) {
-      alert('Cost cannot be less than 0.')
+      Toast.fire({
+        icon: 'error',
+        title: 'Cost cannot be less than 0.',
+      })
       return;
     }
     if (temp.start >= temp.end) {
-      alert('Start time must be before end time');
+      Toast.fire({
+        icon: 'error',
+        title: 'Start time must be before end time.',
+      })
       return;
     }  
 
@@ -503,7 +526,10 @@ export class HomeComponent {
   async addDay() {
     // Display time picker after date is selected
     if (!this.selectedDate) {
-      alert('Please select a date first.');
+      Toast.fire({
+        icon: 'error',
+        title: 'Please select a date first.',
+      })
       return;
     }
 
@@ -511,7 +537,10 @@ export class HomeComponent {
 
     const existing = this.days.find(d => d.date === this.selectedDate);
     if (existing) {
-      alert(`${this.selectedDate} already exists.`)
+      Toast.fire({
+        icon: 'error',
+        title: `${this.selectedDate} already exists.`,
+      });
       return;
     }
 
@@ -528,14 +557,20 @@ export class HomeComponent {
 
   async createDateRange() {
     if (!this.startDateRange || !this.endDateRange) {
-      alert('Please select both start and end date.');
+      Toast.fire({
+        icon: 'error',
+        title: 'Please select both start and end date.',
+      });
       return;
     }
     const start = new Date(this.startDateRange + 'T00:00:00');
     const end = new Date(this.endDateRange + 'T00:00:00');
 
     if (start > end) {
-      alert('Start date cannot be after end date.');
+      Toast.fire({
+        icon: 'error',
+        title: 'Start date cannot be after end date.',
+      });
       return;
     }
 
@@ -566,7 +601,10 @@ export class HomeComponent {
       await Promise.all(savePromises);
       await this.loadAllDays();
     } else {
-      alert('All dates in the range already exist.');
+      Toast.fire({
+        icon: 'error',
+        title: 'All dates in the range already exist.',
+      });
     }
     this.startDateRange = '';
     this.endDateRange = '';
@@ -578,11 +616,17 @@ export class HomeComponent {
     const end = this.generalDayEnd;
 
     if (!start || !end || start < 1 || end < 1) {
-      alert('Please enter valid day numbers.');
+      Toast.fire({
+        icon: 'error',
+        title: 'Please enter valid day numbers.',
+      });
       return;
     }
     if (start > end) {
-      alert('Start day cannot be greater than end day.');
+      Toast.fire({
+        icon: 'warning',
+        title: 'Start day cannot be greater than end day.',
+      });
       return;
     }
     const savePromises: Promise<void>[] = [];
@@ -604,7 +648,10 @@ export class HomeComponent {
       }
     }
     if (newDaysAdded === 0) {
-      alert('All of those days already exist.');
+      Toast.fire({
+        icon: 'error',
+        title: 'All of these days already exist.',
+      });
       return;
     }
     await Promise.all(savePromises);
@@ -637,21 +684,27 @@ export class HomeComponent {
 
     if (!act || !act.name) return;
 
-
     if (!act.start || !act.end) {
-      alert('Please enter both start and end times.');
+      Toast.fire({
+        icon: 'error',
+        title: 'Please enter both start and end times.',
+      });
       return;
     }
-
 
     if (act.start >= act.end) {
-      alert('Activity start time must be before end time.');
+      Toast.fire({
+        icon: 'error',
+        title: 'Activity start time must be before end time.',
+      });
       return;
     }
 
-
     if (act.expectedCost === undefined || act.expectedCost === null || act.expectedCost < 0 || (act.actualCost != null && act.actualCost < 0)) {
-      alert('Please enter a valid cost.');
+      Toast.fire({
+        icon: 'error',
+        title: 'Please enter a valid cost.',
+      });
       return;
     }
 
@@ -777,46 +830,101 @@ export class HomeComponent {
   }
 
 
-  logout() {
-    this.auth.logout().then(() => {
-      this.router.navigate(['/login']);
-    }).catch(err => alert(err.message));
+  async logout() {
+    const result = await Swal.fire({
+      title: 'Logout?',
+      text: 'Are you sure you want to log out?',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
+      confirmButtonText: 'Yes, logout'
+    });
+
+    if (result.isConfirmed) {
+      this.auth.logout()
+        .then(() => {
+        this.router.navigate(['/login']);
+    })
+    .catch(err => {
+      Toast.fire({
+        icon: 'error',
+        title: 'Logout failed',
+        text: err.message
+      });
+    });
+   }
   }
 
 
-  deleteActivity(day: DayPlan, act: Activity) {
-    const confirmDelete = confirm(`Delete activity "${act.name}"?`);
-    if (!confirmDelete) return;
+  async deleteActivity(day: DayPlan, act: Activity) {
+    const result = await Swal.fire({
+      title: 'Delete Activity?',
+      text: `Are you sure you want to delete "${act.name}"? This is not reversible.`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
+      confirmButtonText: 'Yes, delete it.'
+    });
 
-    day.activities = day.activities.filter(a => a !== act);
-    this.invalidateAIAnalysis(day);
-    window.history.replaceState({}, '');
-    this.saveDayToFirebase(day);
-    this.cdr.detectChanges();
+    if (result.isConfirmed) {
+      day.activities = day.activities.filter(a => a !== act);
+      this.invalidateAIAnalysis(day);
+      window.history.replaceState({}, '');
+      this.saveDayToFirebase(day);
+      this.cdr.detectChanges();
+
+      Toast.fire({
+        icon: 'success',
+        title: 'Activity deleted.'
+      });
+    }
   }
 
   async deleteDay(day: DayPlan) {
-    const confirmDelete = confirm(
-      `Delete the entire day (${day.date})? This cannot be undone.`
-    );
+    const result = await Swal.fire({
+      title: 'Delete entire day?',
+      text: `All activities for this day will be lost. This is not reversible.`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
+      confirmButtonText: 'Yes, delete it.'
+    });
 
-    if (!confirmDelete || !this.selectedTrip) return;
+    if (!result.isConfirmed || !this.selectedTrip) return;
 
-    const uid = this.auth.uid;
-    const docRef = doc(this.firestore, 'users', uid, 'trips', this.selectedTrip.id, 'days', day.date);
-    await deleteDoc(docRef);
+    try {
+      const uid = this.auth.uid;
+      const docRef = doc(this.firestore, 'users', uid, 'trips', this.selectedTrip.id, 'days', day.date);
+      await deleteDoc(docRef);
 
-    this.selectedDate = '';
-    this.currentDayIndex = -1;
-    this.viewMode = 'days';
-    await this.loadAllDays();
-    window.history.replaceState({}, '', '/home?tripId=' + this.selectedTrip.id);
-    this.cdr.detectChanges();
-  }
+      this.selectedDate = '';
+      this.currentDayIndex = -1;
+      this.viewMode = 'days';
+      await this.loadAllDays();
+      window.history.replaceState({}, '', '/home?tripId=' + this.selectedTrip.id);
+      this.cdr.detectChanges();
+
+      Toast.fire({
+        icon: 'success',
+        title: 'Day deleted.'
+      });
+    } catch (err) {
+      Toast.fire({
+        icon: 'error',
+        title: 'Failed to delete'
+      });
+    }
+   }
 
   async openWeather(day: DayPlan, coords: {lat: number; lng: number} | null | undefined) {
     if (!coords) {
-      alert('You must select a location from the map');
+      Toast.fire({
+        icon: 'error',
+        title: 'You must select a location from the map',
+      });
       return;
     }
     this.showWeatherPopup = true;
@@ -855,7 +963,10 @@ export class HomeComponent {
       this.cdr.detectChanges();
     } catch (error) {
       console.error('Weather fetch error:', error);
-      alert(`Failed to load weather: ${error}. Forecast possibly unavailable. You may have to use a day closer to the current day.`);
+      Toast.fire({
+        icon: 'error',
+        title: `Failed to load weather: ${error}. Forecast possibly unavailable. You may have to use a day close to the current day.`,
+      });
       this.showWeatherPopup = false;
     }
   }
@@ -1023,7 +1134,10 @@ export class HomeComponent {
   async autofillCurrentDay(day: DayPlan) {
     const emptySlots = this.getEmptyTimeSlots(day);
     if (emptySlots.length === 0) {
-      alert("No empty time slots available.");
+      Toast.fire({
+        icon: 'error',
+        title: 'No empty time slots available.',
+      });
       return;
     }
 
@@ -1079,12 +1193,18 @@ export class HomeComponent {
         this.invalidateAIAnalysis(day);
         await this.saveDayToFirebase(day);
       } else {
-        alert("AI did not return any valid activities to add.");
+        Toast.fire({
+          icon: 'error',
+          title: 'AI did not return any valid activities to add.',
+        });
       }
       this.autofillLocation = '';
     } catch (err) {
       console.error("Autofill error:", err);
-      alert("Autofill failed.");
+      Toast.fire({
+        icon: 'error',
+        title: 'Autofill failed.',
+      });
     } finally {
       this.isAutofilling = false;
       this.cdr.detectChanges();
@@ -1093,11 +1213,17 @@ export class HomeComponent {
 
   async createAITrip() {
     if (!this.aiTripLocation.trim()) {
-      alert('Please enter a location for the AI generated trip.');
+      Toast.fire({
+        icon: 'error',
+        title: 'Please enter a location for the AI generated trip.',
+      });
       return;
     }
     if (this.days.length === 0) {
-      alert('Please add at least one day to the trip first before proceeding.');
+      Toast.fire({
+        icon: 'error',
+        title: 'Please add at least one day to the trip first before proceeding.',
+      });
       return;
     }
     this.isCreatingAITrip = true;
@@ -1178,9 +1304,15 @@ export class HomeComponent {
     }
     this.aiTripLocation = '';
     if (failedDays.length > 0) {
-      alert(`AI Trip creation complete! However, these days could not be filled and will need to be autofilled manually:\n${failedDays.join('\n')}`);
+      Toast.fire({
+        icon: 'warning',
+        title: `AI Trip creation complete! However, these days could not be filled and will need to be autofilled manually:\n${failedDays.join('\n')}`,
+      });
     } else {
-      alert('AI Trip creation complete!');
+      Toast.fire({
+        icon: 'success',
+        title: 'AI Trip creation complete!',
+      });
     }
   } finally {
     this.isCreatingAITrip = false;
@@ -1247,14 +1379,20 @@ export class HomeComponent {
   async saveEditTripName() {
     const newName = this.editTripNameValue.trim();
     if (!newName) {
-      alert('Create a trip name.');
+      Toast.fire({
+        icon: 'error',
+        title: 'Create a trip name.',
+      });
       return;
     }
     const duplicate = this.trips.some(t =>
       t.name.toLowerCase() === newName.toLowerCase() && t.id !== this.selectedTrip!.id
     );
     if (duplicate) {
-      alert('A trip with this name already exists.');
+      Toast.fire({
+        icon: 'error',
+        title: 'A trip with this name already exists.',
+      });
       return;
     }
     const uid = this.auth.uid;
@@ -1269,9 +1407,17 @@ export class HomeComponent {
   async deleteTrip(trip: Trip, event: Event) {
     event.stopPropagation();
 
-    if (!confirm(`You are about to delete the entire trip, "${trip.name}". This also deletes any associated data like dates and activities. This cannot be reversed.`)) {
-    return;
-    }
+    const result = await Swal.fire({
+      title: 'Delete entire trip?',
+      text: `You are about to delete "${trip.name}". This deletes any associated data like dates and activities. This cannot be reversed.`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
+      confirmButtonText: 'Yes, delete the trip.'
+    });
+
+    if (!result.isConfirmed) return;
 
     const uid = this.auth.uid;
     if (!uid) return;
@@ -1294,10 +1440,16 @@ export class HomeComponent {
       } else {
         setTimeout(() => this.cdr.detectChanges(), 0);
       }
-      alert('Trip and associated data has been deleted.');
+      Toast.fire({
+        icon: 'success',
+        title: 'Trip and associated data has been deleted.',
+      });
     } catch (error) {
       console.error("Error deleting trip:", error);
-      alert('Failed to delete trip. Please try again.');
+      Toast.fire({
+        icon: 'error',
+        title: 'Failed to delete trip.',
+      });
     }
   }
 
@@ -1315,7 +1467,10 @@ export class HomeComponent {
   async saveEditDayDate(day: DayPlan) {
     const newDate = this.editDayDateValue;
     if (!newDate) {
-      alert('Please select a valid date.');
+      Toast.fire({
+        icon: 'warning',
+        title: 'Please select a valid date.',
+      });
       return;
     }
     if (newDate === day.date) {
@@ -1324,7 +1479,10 @@ export class HomeComponent {
     }
     const duplicate = this.days.some(d => d.date === newDate);
     if (duplicate) {
-      alert(`A day for ${newDate} already exists in this trip.`);
+      Toast.fire({
+        icon: 'error',
+        title: `A day for ${newDate} already exists in this trip.`,
+      });
       return;
     }
     const uid = this.auth.uid;
@@ -1373,7 +1531,10 @@ export class HomeComponent {
     const origin = this.flightDepartureCity.trim();
     const destination = this.flightDestinationCity.trim();
     if (!origin || !destination) {
-      alert('Please enter both departure and destination cities.');
+      Toast.fire({
+        icon: 'error',
+        title: 'Please enter both departure and destination cities.',
+      });
       return;
     }
     const url = `https://www.google.com/travel/flights?q=flights+from+${encodeURIComponent(origin)}+to+${encodeURIComponent(destination)}`;
@@ -1382,20 +1543,35 @@ export class HomeComponent {
 
   findHotels() {
     const city = this.bookingCity.trim();
-    if (!city) { alert('Please enter a city.'); return; }
+    if (!city) { 
+      Toast.fire({
+        icon: 'error',
+        title: 'Please enter a city.',
+      });
+      return; 
+    }
     const url = `https://www.booking.com/searchresults.html?ss=${encodeURIComponent(city)}`;
     this.openBookingPopup(`Hotels in ${city}`, url);
   }
 
   async findCarRentals() {
     const city = this.bookingCity.trim();
-    if (!city) { alert('Please enter a city.'); return; }
+    if (!city) {       
+      Toast.fire({
+        icon: 'error',
+        title: 'Please enter a city.',
+      }); 
+      return; 
+    }
 
     const geo = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=1`);
     const geoDate = await geo.json();
 
     if (!geoDate.results?.length) {
-      alert('City not found. Please try a different city name.');
+      Toast.fire({
+        icon: 'error',
+        title: 'City not found. Please try a different city name.',
+      });
       return;
     }
 
@@ -1431,7 +1607,13 @@ export class HomeComponent {
 
   findAttractions() {
     const city = this.bookingCity.trim();
-    if (!city) { alert('Please enter a city.'); return; }
+    if (!city) { 
+      Toast.fire({
+        icon: 'error',
+        title: 'Please enter a city.',
+      });
+      return; 
+    }
     const url = `https://www.getyourguide.com/s/?q=${encodeURIComponent(city)}`;
     this.openBookingPopup(`Attractions in ${city}`, url);
   }
