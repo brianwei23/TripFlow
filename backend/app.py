@@ -151,12 +151,16 @@ def autofill_day():
 
     existing_raw = data.get('existingActivities', [])
     existing_names = [act.get('name', '') for act in existing_raw if act.get('name')]
+    day_index = data.get('dayIndex', 0)
+    used_cities = data.get('usedCities', [])
+    used_cities_str = ', '.join(used_cities) if used_cities else 'None'
 
     prompt = f"""
-    Task: Fill these empty time slots with travel activities. Make it so that it fills MOST of the day between 7AM and 9PM.
+    Task: Fill these empty time slots with travel activities for day {day_index + 1}. Make it so that it fills MOST of the day between 7AM and 9PM.
     {location_instruction}
     Empty Slots: {data.get('emptySlots')}
     ALREADY VISITED LOCATIONS: {existing_names}
+    Cities visited in previous days, in order: {used_cities_str}
 
     1. You can only return activities between 7 AM and 9 PM. Fill in the entire day during that period. 6-9 activities each day.
     2. DO NOT suggest any landmarks or points of interest listed in the ALREADY VISITED LOCATIONS above. Pick entirely different areas/attractions
@@ -167,6 +171,10 @@ def autofill_day():
     5. Create ACCURATE latitute and longitude coordinates for each location, and put it in the 'coords' object.
     6. Make sure the schedule flows perfectly and is feasible. Make sure locations and landmarks are real. All costs are in USD.
     7. Make sure to suggest points of interest in various areas in the location provided and not to focus only on one city/area. For example, if Australia is the location, it should contain activities in Sydney, Darwin, Perth, Melbourne, etc.
+       You must pick a different city or region from these cities already used: {used_cities_str}.
+    8. Look at the last city and the previous cities visited in the list above. Pick a city that is logical to travel to next. Do not start jumping back and forth. Ensure a smooth trip.
+    9. Think like an actual traveler when considering previous cities already visited and their order. Minimize backtracking and unnecessary long-haul travel between days. Make sure not to stay in one area but to go explore other areas in the country/region in question for a well-rounded trip.
+    10. Do not reuse cities from previous days unless there is a good reason to.
     Example format:
     {{
         "activities": [

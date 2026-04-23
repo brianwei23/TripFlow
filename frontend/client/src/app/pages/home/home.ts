@@ -1156,7 +1156,7 @@ export class HomeComponent {
       emptySlots,
       dayStart: "08:00",
       dayEnd: "21:00",
-      locationContext: this.autofillLocation || this.selectedTrip?.name
+      locationContext: this.autofillLocation || this.selectedTrip?.name,
     };
 
     try {
@@ -1232,6 +1232,7 @@ export class HomeComponent {
     try {
       let allTripActivities: any[] = [];
       const failedDays: string[] = [];
+      const usedCities: string[] = [];
 
       for (let i = 0; i < this.days.length; i++) {
         const day = this.days[i];
@@ -1253,7 +1254,9 @@ export class HomeComponent {
           emptySlots,
           dayStart: '08:00',
           dayEnd: '21:00',
-          locationContext: this.aiTripLocation.trim()
+          locationContext: this.aiTripLocation.trim(),
+          dayIndex: i,
+          usedCities: [...usedCities]
         };
 
         let success = false;
@@ -1289,6 +1292,14 @@ export class HomeComponent {
             }
           }
           await this.saveDayToFirebase(day);
+          // Track city used this day to avoid repeats
+          if (parsed.activities?.length > 0) {
+            const firstLocation = parsed.activities[0].location || '';
+            const cityGuess = firstLocation.split(',')[0].trim();
+            if (cityGuess && !usedCities.includes(cityGuess)) {
+              usedCities.push(cityGuess);
+            }
+          }
           success = true;
         } catch (err) {
           console.error(`Attempt ${attempt} failed for day ${day.date}:`, err);
