@@ -33,6 +33,8 @@ export class TripMapComponent implements OnInit {
     private days: DayPlan[] = [];
     private map!: L.Map;
     private tripId: string = '';
+    private activeGreenMarkers: L.Marker[] = [];
+    private activeGreenLine: L.Polyline | null = null;
 
     constructor(private router: Router, private route: ActivatedRoute) {}
 
@@ -94,6 +96,7 @@ export class TripMapComponent implements OnInit {
                 iconAnchor: [20, 20]
             });
 
+            const day = this.days[i];
             L.marker(pin.latlng, { icon })
                 .addTo(this.map)
                 .bindPopup(`
@@ -102,7 +105,9 @@ export class TripMapComponent implements OnInit {
                         ${pin.actName}<br/>
                         <a href="${pin.dayUrl}" style="color:#2563eb; font-size: 20px;">View Day</a>
                     </div>
-                `);
+                `)
+                .on('popupopen', () => this.showDayActivities(day))
+                .on('popupclose', () => this.clearDayActivities());
         });
 
         const group = L.featureGroup(pins.map((p: { latlng: L.LatLng }) => L.marker(p.latlng)));
@@ -111,6 +116,57 @@ export class TripMapComponent implements OnInit {
         if (pins.length >= 2) {
             await this.drawRoute(pins.map((p: { latlng: L.LatLng }) => p.latlng));
         }
+    }
+
+    private async showDayActivities(day: DayPlan) {
+        this.clearDayActivities();
+
+        const coords: L.LatLng[] = [];
+        let pinIndex = 1;
+        for (const act of day.activities) {
+            if (!act.coords?.lat || !act.coords?.lng) continue;
+            const latlng = L.latLng(act.coords.lat, act.coords.lng);
+            const greenIcon = L.divIcon({
+                className: '',
+                html: `<div style="background:green;color:#fff;border-radius:50%;
+                    width:30px;height:30px;display:flex;align-items:center;
+                    justify-content:center;font-weight:bold;font-size:14px;
+                    border:2px solid white;box-shadow:0 0 3px rgba(0,0,0,0.4);">
+                    ${pinIndex++}
+                </div>`,
+                iconSize: [30, 30],
+                iconAnchor: [15, 15]
+            });
+
+            const marker = L.marker(latlng, { icon: greenIcon })
+                .addTo(this.map)
+                .bindTooltip(act.name, { permanent: false });
+            this.activeGreenMarkers.push(marker);
+            coords.push(latlng);
+        }
+
+        if (coords.length >= 2) {
+            const routeCoords = coords.map(c => `${c.lng},${c.lat}`).join(';');
+            const url = `https://router.project-osrm.org/route/v1/driving/${routeCoords}?overview=full&geometries=geojson`;
+            try {
+                const res = await fetch(url);
+                const data = await res.json();
+                if (data.routes?.[0]?.geometry) {
+                    this.activeGreenLine = L.geoJSON(data.routes[0].geometry, {
+                        style: { color: 'green', weight: 5, opacity: 0.8 }
+                    }).addTo(this.map) as any;
+                }
+            } catch {
+                this.activeGreenLine = L.polyline(coords, { color: 'green', weight: 5, dashArray: '6,4' }).addTo(this.map);
+            }
+        }
+    }
+
+    private clearDayActivities() {
+        this.activeGreenMarkers.forEach(m => m.remove());
+        this.activeGreenMarkers = [];
+        this.activeGreenLine?.remove();
+        this.activeGreenLine = null;
     }
 
     private async drawRoute(waypoints: L.LatLng[]) {
