@@ -3,6 +3,8 @@ import { AuthService } from '../../services/auth.service';
 import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
+import { Firestore } from '@angular/fire/firestore';
+import { doc, setDoc } from 'firebase/firestore';
 import Swal from 'sweetalert2';
 import { Toast } from '../../notifications';
 
@@ -17,7 +19,7 @@ export class RegisterComponent {
   email = '';
   password = '';
 
-  constructor(private auth: AuthService, private router: Router) {}
+  constructor(private auth: AuthService, private router: Router, private firestore: Firestore) {}
 
   // Password strength: Must have at least 7 chars, and have lower/uppercase, number, and symbol
   private passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{7,}$/;
@@ -34,12 +36,16 @@ export class RegisterComponent {
     }
     // Calling Firebase Auth
     this.auth.register(this.email, this.password)
-      .then(() => {
-        Toast.fire({
-          icon: 'success',
-          title: 'Verification email sent!',
+      .then((cred) => {
+        setDoc(doc(this.firestore, 'users', cred.user.uid), {
+          email: this.email.toLowerCase().trim()
+        }).then(() => {
+          Toast.fire({
+            icon: 'success',
+            title: 'Verification email sent!',
+          });
+          this.router.navigate(['/login']);
         });
-        this.router.navigate(['/login']);
       })
       .catch(error => {
         // Duplicate email check

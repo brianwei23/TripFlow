@@ -15,6 +15,9 @@ interface Trip {
   id: string;
   name: string;
   dateRange?: { start: string; end: string } | null;
+  isShared?: boolean;
+  sharedFrom?: string;
+  originalTripId?: string;
 }
 
 interface Activity {
@@ -119,6 +122,12 @@ export class HomeComponent {
   bookingPopupTitle: string = '';
   bookingPopupUrl: string = '';
 
+  showShareTripPopup = false;
+  shareSearchQuery = '';
+  shareSearchResults: { uid: string; username: string }[] = [];
+  shareSearchLoading = false;
+  shareTripMembers: { uid: string; email: string }[] = [];
+
   ngOnInit() {
     this.route.params.subscribe(async params => {
       const dateParam = params['date'];
@@ -136,7 +145,14 @@ export class HomeComponent {
             if (uid) {
               const tripDoc = await getDoc(doc(this.firestore, 'users', uid, 'trips', tripIdParam));
               if (tripDoc.exists()) {
-                this.selectedTrip = { id: tripIdParam, name: (tripDoc.data() as any).name || '' };
+                const data = tripDoc.data() as any;
+                this.selectedTrip = { 
+                  id: tripIdParam, 
+                  name: data.name || '',
+                  isShared: data.isShared ?? false,
+                  sharedFrom: data.sharedFrom ?? null,
+                  originalTripId: data.originalTripId ?? null 
+                };
               } else {
                 this.selectedTrip = { id: tripIdParam, name: '' };
               }
@@ -146,7 +162,14 @@ export class HomeComponent {
             if (uid) {
               const tripDoc = await getDoc(doc(this.firestore, 'users', uid, 'trips', history.state.tripId));
               if (tripDoc.exists()) {
-                this.selectedTrip = { id: history.state.tripId, name: (tripDoc.data() as any).name || ''};
+                const data = tripDoc.data() as any;
+                this.selectedTrip = { 
+                  id: history.state.tripId, 
+                  name: data.name || '',
+                  isShared: data.isShared ?? false,
+                  sharedFrom: data.sharedFrom ?? null,
+                  originalTripId: data.originalTripId ?? null
+                };
               } else {
                 this.selectedTrip = { id: history.state.tripId, name: history.state.tripName || ''};
               }
@@ -212,7 +235,14 @@ export class HomeComponent {
           if (uid && !this.selectedTrip) {
             const tripDoc = await getDoc(doc(this.firestore, 'users', uid, 'trips', tripIdParam));
             if (tripDoc.exists()) {
-              this.selectedTrip = { id: tripIdParam, name: (tripDoc.data() as any).name || ''};
+              const data = tripDoc.data() as any;
+              this.selectedTrip = { 
+                id: tripIdParam, 
+                name: data.name || '',
+                isShared: data.isShared ?? false,
+                sharedFrom: data.sharedFrom ?? null,
+                originalTripId: data.originalTripId ?? null
+              };
             }
           }
           this.viewMode = 'days';
@@ -236,23 +266,39 @@ export class HomeComponent {
     const trips: Trip[] = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Trip));
 
     await Promise.all(trips.map(async (trip) => {
-      const daysCol = collection(this.firestore, 'users', uid, 'trips', trip.id, 'days');
-      const daysSnap = await getDocs(daysCol);
-      const dates = daysSnap.docs
-        .map(d => d.id) 
-        .sort((a, b) => {
-          const aIsGeneral = a.startsWith('general-');
-          const bIsGeneral = b.startsWith('general-');
+        try {
+            const ownerUid = trip.isShared ? trip.sharedFrom! : uid;
+            const ownerTripId = trip.isShared ? trip.originalTripId! : trip.id;
 
-          if (aIsGeneral && bIsGeneral) {
-            const aNum = Number(a.replace('general-', ''));
-            const bNum = Number(b.replace('general-', ''));
-            return aNum - bNum;
-          }
-          return a.localeCompare(b);
-        })
-      trip.dateRange = dates.length > 0 ? {start: dates[0], end: dates[dates.length - 1]} : null;
+            if (trip.isShared) {
+                console.log('Loading shared trip name for:', trip.id, 'from owner:', trip.sharedFrom);
+                const ownerTripDoc = await getDoc(doc(this.firestore, 'users', ownerUid, 'trips', ownerTripId));
+                if (ownerTripDoc.exists()) {
+                    trip.name = (ownerTripDoc.data() as any).name || trip.name;
+                }
+            }
+
+            const daysCol = collection(this.firestore, 'users', ownerUid, 'trips', ownerTripId, 'days');
+            const daysSnap = await getDocs(daysCol);
+            const dates = daysSnap.docs
+                .map(d => d.id)
+                .sort((a, b) => {
+                    const aIsGeneral = a.startsWith('general-');
+                    const bIsGeneral = b.startsWith('general-');
+                    if (aIsGeneral && bIsGeneral) {
+                        const aNum = Number(a.replace('general-', ''));
+                        const bNum = Number(b.replace('general-', ''));
+                        return aNum - bNum;
+                    }
+                    return a.localeCompare(b);
+                });
+            trip.dateRange = dates.length > 0 ? { start: dates[0], end: dates[dates.length - 1] } : null;
+        } catch (err) {
+            console.warn(`Could not load trip ${trip.id}:`, err);
+            trip.dateRange = null;
+        }
     }));
+
     this.trips = trips;
     this.applyTripsSort();
     this.cdr.detectChanges();
@@ -365,7 +411,10 @@ export class HomeComponent {
     const uid = this.auth.uid;
     if (!uid || !this.selectedTrip) return;
 
-    const daysCol = collection(this.firestore, 'users', uid, 'trips', this.selectedTrip.id, 'days');
+    const ownerId = this.selectedTrip.isShared ? this.selectedTrip.sharedFrom! : uid;
+    const tripId = this.selectedTrip.isShared ? this.selectedTrip.originalTripId! : this.selectedTrip.id;
+
+    const daysCol = collection(this.firestore, 'users', ownerId, 'trips', tripId, 'days');
     const snap = await getDocs(daysCol);
     const allDays: DayPlan[] = snap.docs
       .map(d => d.data() as PersistedDayPlan)
@@ -382,19 +431,113 @@ export class HomeComponent {
       });
 
     this.router.navigate(['/trip-map'], {
-      queryParams: { tripId: this.selectedTrip.id },
+      queryParams: { tripId: tripId },
       state: {
         tripName: this.selectedTrip.name,
-        tripId: this.selectedTrip.id,
+        tripId: tripId,
         days: allDays
       }
     });
+  }
+
+  async openShareTripPopup() {
+    this.shareSearchQuery = '';
+    this.shareSearchResults = [];
+    this.shareTripMembers = [];
+    this.showShareTripPopup = true;
+    this.cdr.detectChanges();
+
+    if (!this.selectedTrip) return;
+    const uid = this.auth.uid;
+    const ownerUid = this.selectedTrip.isShared ? this.selectedTrip.sharedFrom! : uid;
+    const tripId = this.selectedTrip.isShared ? this.selectedTrip.originalTripId! : this.selectedTrip.id;
+
+    // Load owner email
+    try {
+      const ownerDoc = await getDoc(doc(this.firestore, 'users', ownerUid));
+      const ownerEmail = ownerDoc.exists() ? (ownerDoc.data() as any).email : ownerUid;
+      this.shareTripMembers.push({ uid: ownerUid, email: `${ownerEmail} (owner)` });
+    } catch {}
+
+    // Load users the trip is shared with
+    try {
+      const ownerTripDoc = await getDoc(doc(this.firestore, 'users', ownerUid, 'trips', tripId));
+      const sharedWith: string[] = ownerTripDoc.exists() ? ((ownerTripDoc.data() as any).sharedWith ?? []) : [];
+      for (const memberUid of sharedWith) {
+        try {
+          const memberDoc = await getDoc(doc(this.firestore, 'users', memberUid));
+          const email = memberDoc.exists() ? (memberDoc.data() as any).email : memberUid;
+          this.shareTripMembers.push({ uid: memberUid, email });
+        } catch {}
+      }
+    } catch {}
+    this.cdr.detectChanges();
+  }
+
+  closeShareTripPopup() {
+    this.showShareTripPopup = false;
+    this.cdr.detectChanges();
+  }
+
+  async searchUsersToShare() {
+    if (!this.shareSearchQuery.trim()) return;
+    this.shareSearchLoading = true;
+    this.shareSearchResults = [];
+    this.cdr.detectChanges();
+
+    try {
+      const usersCol = collection(this.firestore, 'users');
+      const snapshot = await getDocs(usersCol);
+      const memberUids = new Set(this.shareTripMembers.map(m => m.uid));
+      this.shareSearchResults = snapshot.docs
+        .filter(d => { 
+          const data = d.data() as any;
+          return data.email &&
+            data.email.toLowerCase().includes(this.shareSearchQuery.toLowerCase()) &&
+            d.id !== this.auth.uid &&
+            !memberUids.has(d.id);
+        })
+        .map(d => ({ uid: d.id, username: (d.data() as any).email }));
+    } finally {
+      this.shareSearchLoading = false;
+      this.cdr.detectChanges();
+    }
+  }
+
+  async shareWithUser(targetUid: string, targetUsername: string) {
+    if (!this.selectedTrip) return;
+    const uid = this.auth.uid;
+
+    const ownerUid = this.selectedTrip.isShared ? this.selectedTrip.sharedFrom! : uid;
+    const tripId = this.selectedTrip.isShared ? this.selectedTrip.originalTripId! : this.selectedTrip.id;
+
+    await setDoc(doc(this.firestore, 'users', targetUid, 'trips', tripId), {
+      name: this.selectedTrip.name,
+      sharedFrom: ownerUid,
+      originalTripId: tripId,
+      isShared: true
+    });
+
+    const ownerTripDoc = await getDoc(doc(this.firestore, 'users', ownerUid, 'trips', tripId));
+    const existingSharedWith: string[] = ownerTripDoc.exists() ? ((ownerTripDoc.data() as any).sharedWith ?? []) : [];
+    if (!existingSharedWith.includes(targetUid)) {
+      await setDoc(doc(this.firestore, 'users', ownerUid, 'trips', tripId),
+        { sharedWith: [...existingSharedWith, targetUid] },
+        { merge: true }
+      );
+    }
+
+    Toast.fire({ icon: 'success', title: `Trip shared with ${targetUsername}!` });
+    this.closeShareTripPopup();
   }
 
 
   async saveDayToFirebase(day: DayPlan) {
     const uid = this.auth.uid;
     if (!uid || !this.selectedTrip) return;
+
+    const ownerUid = this.selectedTrip.isShared ? this.selectedTrip.sharedFrom! : uid;
+    const tripId = this.selectedTrip.isShared ? this.selectedTrip.originalTripId! : this.selectedTrip.id;
 
     const sanitizedDay: PersistedDayPlan = {
       date: day.date,
@@ -409,7 +552,7 @@ export class HomeComponent {
         actualCost: act.actualCost !== undefined ? act.actualCost : null
       }))
     };
-    const docRef = doc(this.firestore, 'users', uid, 'trips', this.selectedTrip.id, 'days', day.date);
+    const docRef = doc(this.firestore, 'users', ownerUid, 'trips', tripId, 'days', day.date);
     await setDoc(docRef, sanitizedDay);
   }
 
@@ -417,7 +560,11 @@ export class HomeComponent {
   async loadDayFromFirebase(date: string): Promise<DayPlan | null> {
     const uid = this.auth.uid;
     if (!uid || !this.selectedTrip) return null;
-    const docRef = doc(this.firestore, 'users', uid, 'trips', this.selectedTrip.id, 'days', date);
+
+    const ownerUid = this.selectedTrip.isShared ? this.selectedTrip.sharedFrom! : uid;
+    const tripId = this.selectedTrip.isShared ? this.selectedTrip.originalTripId! : this.selectedTrip.id;
+    
+    const docRef = doc(this.firestore, 'users', ownerUid, 'trips', tripId, 'days', date);
     const docSnap = await getDoc(docRef);
 
     if (!docSnap.exists()) return null;
@@ -733,7 +880,12 @@ export class HomeComponent {
   async loadAllDays() {
    if (!this.selectedTrip) return;
    const uid = this.auth.uid;
-   const daysCol = collection(this.firestore, 'users', uid, 'trips', this.selectedTrip.id, 'days');
+
+   // For sharing
+   const ownerUid = this.selectedTrip.isShared ? this.selectedTrip.sharedFrom! : uid;
+   const tripId = this.selectedTrip.isShared ? this.selectedTrip.originalTripId! : this.selectedTrip.id;
+
+   const daysCol = collection(this.firestore, 'users', ownerUid, 'trips', tripId, 'days');
    const snapshot = await getDocs(daysCol);
 
    this.days = snapshot.docs
@@ -897,7 +1049,10 @@ export class HomeComponent {
 
     try {
       const uid = this.auth.uid;
-      const docRef = doc(this.firestore, 'users', uid, 'trips', this.selectedTrip.id, 'days', day.date);
+      const ownerUid = this.selectedTrip.isShared ? this.selectedTrip.sharedFrom! : uid;
+      const tripId = this.selectedTrip.isShared ? this.selectedTrip.originalTripId! : this.selectedTrip.id;
+      
+      const docRef = doc(this.firestore, 'users', ownerUid, 'trips', tripId, 'days', day.date);
       await deleteDoc(docRef);
 
       this.selectedDate = '';
@@ -1407,7 +1562,20 @@ export class HomeComponent {
       return;
     }
     const uid = this.auth.uid;
-    await setDoc(doc(this.firestore, 'users', uid, 'trips', this.selectedTrip!.id), {name: newName});
+    const ownerUid = this.selectedTrip!.isShared ? this.selectedTrip!.sharedFrom! : uid;
+    const tripId = this.selectedTrip!.isShared ? this.selectedTrip!.originalTripId! : this.selectedTrip!.id;
+
+    await setDoc(doc(this.firestore, 'users', ownerUid, 'trips', tripId), {name: newName});
+
+    if (this.selectedTrip!.isShared) {
+      await setDoc(doc(this.firestore, 'users', uid, 'trips', this.selectedTrip!.id), {
+        name: newName,
+        isShared: true,
+        sharedFrom: this.selectedTrip!.sharedFrom,
+        originalTripId: this.selectedTrip!.originalTripId
+      });
+    }
+    
     this.selectedTrip!.name = newName;
     const tripInList = this.trips.find(t => t.id === this.selectedTrip!.id);
     if (tripInList) tripInList.name = newName;
@@ -1497,11 +1665,14 @@ export class HomeComponent {
       return;
     }
     const uid = this.auth.uid;
-    const newDocRef = doc(this.firestore, 'users', uid, 'trips', this.selectedTrip!.id, 'days', newDate);
+    const ownerUid = this.selectedTrip!.isShared ? this.selectedTrip!.sharedFrom! : uid;
+    const tripId = this.selectedTrip!.isShared ? this.selectedTrip!.originalTripId! : this.selectedTrip!.id;
+
+    const newDocRef = doc(this.firestore, 'users', ownerUid, 'trips', tripId, 'days', newDate);
     await setDoc(newDocRef, { date: newDate, activities: day.activities });
 
     // Delete old date
-    const oldDocRef = doc(this.firestore, 'users', uid, 'trips', this.selectedTrip!.id, 'days', day.date);
+    const oldDocRef = doc(this.firestore, 'users', ownerUid, 'trips', tripId, 'days', day.date);
     await deleteDoc(oldDocRef);
 
     day.date = newDate;

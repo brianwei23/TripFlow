@@ -28,7 +28,7 @@
   <div class="days-container">
     @for (trip of trips; track trip.id) {
       <div class="day-tile" (click)="openTrip(trip)">
-        <h3>{{trip.name}}</h3>
+        <h3>{{trip.name}} <span *ngIf="trip.isShared" style="font-size:16px; color:#7b1fa2; font-weight:500;">(Shared)</span></h3>
         @if (trip.dateRange) {
           <p class="trip-date-range"><b>{{formatDayLabel(trip.dateRange.start)}} — {{formatDayLabel(trip.dateRange.end)}}</b></p>
         } @else {
@@ -48,6 +48,7 @@
       <h2>{{selectedTrip?.name}}</h2>
       <div class="header-actions"> 
         <button class="edit-btn" (click)="startEditTripName()">Edit Trip</button>
+        <button class="edit-btn" (click)="openShareTripPopup()">Share Trip</button>
         <button
           class="delete-trip-btn"
           (click)="deleteTrip(selectedTrip!, $event)" >
@@ -346,3 +347,51 @@
     (close)="closeWeatherPopup()">
   </app-weather>
 }  
+
+@if (showShareTripPopup) {
+  <div class="booking-popup-overlay" (click)="closeShareTripPopup()">
+    <div class="booking-popup" style="width: 400px;" (click)="$event.stopPropagation()">
+      <div class="booking-popup-header">
+        <span>Share Trip</span>
+        <button class="close-btn-x" (click)="closeShareTripPopup()">X</button>
+      </div>
+      <div class="booking-popup-body">
+        @if (shareTripMembers.length > 0) {
+          <div style="width:100%; margin-top:0px; margin-bottom:12px;">
+            <p style="font-size:20px; color:#403e3e; margin-top:0; margin-bottom:6px;"><b>Shared members:</b></p>
+            @for (member of shareTripMembers; track member.uid) {
+              <div style="font-size:18px; padding:6px 0; border-bottom:1px solid #f0f0f0; color:#333;">
+                {{member.email}}
+              </div>
+            }
+          </div>
+        }
+        <div style="display:flex; gap:8px; width:100%;">
+          <input
+            type="text"
+            [(ngModel)]="shareSearchQuery"
+            placeholder="Search email..."
+            (keyup.enter)="searchUsersToShare()"
+            style="flex:1; padding:10px; font-size:18px; border-radius:6px; border:1px solid #ccc;"
+          />
+          <button class="save-btn" (click)="searchUsersToShare()">Search</button>
+        </div>
+        @if (shareSearchLoading) {
+          <div style="display:flex; align-items:center; gap:8px; margin-top:10px;">
+            <div class="spinner-small"></div>
+            <span>Searching...</span>
+          </div>
+        }
+        @if (!shareSearchLoading && shareSearchResults.length == 0 && shareSearchQuery) {
+          <p style="font-size:18px; color:#888;">No users found.</p>
+        }
+        @for (user of shareSearchResults; track user.uid) {
+          <div style="display:flex; justify-content:space-between; align-items:center; width: 100%; padding:8px 0; border-bottom:1px solid #eee;">
+            <span style="font-size:20px;">{{user.username}}</span>
+            <button class="add-trip-btn" style="font-size:18px; margin:0; padding:6px 14px;" (click)="shareWithUser(user.uid, user.username)">Share</button>
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+}
