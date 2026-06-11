@@ -47,12 +47,12 @@
     @if (!isEditingTripName) {
       <h2>{{selectedTrip?.name}}</h2>
       <div class="header-actions"> 
-        <button class="edit-btn" (click)="startEditTripName()">Edit Trip</button>
-        <button class="edit-btn" (click)="openShareTripPopup()">Share Trip</button>
+        <button class="edit-btn" (click)="startEditTripName()">Edit</button>
+        <button class="edit-btn" (click)="openShareTripPopup()">Share</button>
         <button
           class="delete-trip-btn"
           (click)="deleteTrip(selectedTrip!, $event)" >
-          Delete Trip
+          Delete
         </button>
       </div>
       <div class="flights-container">

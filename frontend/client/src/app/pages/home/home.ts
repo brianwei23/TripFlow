@@ -264,6 +264,7 @@ export class HomeComponent {
     const tripsCol = collection(this.firestore, 'users', uid, 'trips');
     const snapshot = await getDocs(tripsCol);
     const trips: Trip[] = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Trip));
+    console.log ('All trips loaded for uid:', uid, trips.map(t => ({ id: t.id, isShared: t.isShared, sharedFrom: t.sharedFrom })));
 
     await Promise.all(trips.map(async (trip) => {
         try {
@@ -271,8 +272,9 @@ export class HomeComponent {
             const ownerTripId = trip.isShared ? trip.originalTripId! : trip.id;
 
             if (trip.isShared) {
-                console.log('Loading shared trip name for:', trip.id, 'from owner:', trip.sharedFrom);
+                console.log('Trip:', trip.id, 'sharedFrom:', trip.sharedFrom, 'originalTripId:', trip.originalTripId);
                 const ownerTripDoc = await getDoc(doc(this.firestore, 'users', ownerUid, 'trips', ownerTripId));
+                console.log('Owner trip doc exists:', ownerTripDoc.exists());
                 if (ownerTripDoc.exists()) {
                     trip.name = (ownerTripDoc.data() as any).name || trip.name;
                 }
@@ -1565,7 +1567,7 @@ export class HomeComponent {
     const ownerUid = this.selectedTrip!.isShared ? this.selectedTrip!.sharedFrom! : uid;
     const tripId = this.selectedTrip!.isShared ? this.selectedTrip!.originalTripId! : this.selectedTrip!.id;
 
-    await setDoc(doc(this.firestore, 'users', ownerUid, 'trips', tripId), {name: newName});
+    await setDoc(doc(this.firestore, 'users', ownerUid, 'trips', tripId), {name: newName}, {merge: true});
 
     if (this.selectedTrip!.isShared) {
       await setDoc(doc(this.firestore, 'users', uid, 'trips', this.selectedTrip!.id), {
@@ -1573,7 +1575,7 @@ export class HomeComponent {
         isShared: true,
         sharedFrom: this.selectedTrip!.sharedFrom,
         originalTripId: this.selectedTrip!.originalTripId
-      });
+      }, { merge: true });
     }
     
     this.selectedTrip!.name = newName;
@@ -1609,6 +1611,21 @@ export class HomeComponent {
 
       const deletePromises = daysSnapshot.docs.map(dayDoc => deleteDoc(dayDoc.ref));
       await Promise.all(deletePromises);
+
+      // Remove self from shared list
+      if (trip.isShared && trip.sharedFrom && trip.originalTripId) {
+        try {
+          const ownerTripRef = doc(this.firestore, 'users', trip.sharedFrom, 'trips', trip.originalTripId);
+          const ownerTripDoc = await getDoc(ownerTripRef);
+          if (ownerTripDoc.exists()) {
+            const sharedWith: string[] = (ownerTripDoc.data() as any).sharedWith ?? [];
+            const updated = sharedWith.filter(id => id !== uid);
+            await setDoc(ownerTripRef, { sharedWith: updated }, { merge: true });
+          }
+        } catch (err) {
+          console.warn('Could not update sharedWith on owner trip:', err);
+        }
+      }
 
       await deleteDoc(tripRef);
 
