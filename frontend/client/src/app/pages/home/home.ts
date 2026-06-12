@@ -10,6 +10,7 @@ import { WeatherComponent } from '../weather/weather';
 import { environment } from '../../../environments/environment';
 import Swal from 'sweetalert2';
 import { Toast } from '../../notifications';
+import { currencySymbolMap } from 'currency-symbol-map';
 
 interface Trip {
   id: string;
@@ -18,6 +19,8 @@ interface Trip {
   isShared?: boolean;
   sharedFrom?: string;
   originalTripId?: string;
+  currency?: string | null;
+  currencyCode?: string | null;
 }
 
 interface Activity {
@@ -49,6 +52,11 @@ interface DayPlan {
 interface PersistedDayPlan {
   date: string;
   activities: Activity[];
+}
+
+interface CurrencyOption {
+  symbol: string;
+  code: string;
 }
 
 @Component({
@@ -128,7 +136,14 @@ export class HomeComponent {
   shareSearchLoading = false;
   shareTripMembers: { uid: string; email: string }[] = [];
 
+  showCurrencyModal = false;
+  pendingTripForCurrency: Trip | null = null;
+  currencyOptions: CurrencyOption[] = [];
+  selectedCurrency: string | null = null;
+  selectedCurrencyCode: string | null = null;
+
   ngOnInit() {
+    this.buildCurrencyList();
     this.route.params.subscribe(async params => {
       const dateParam = params['date'];
       
@@ -151,7 +166,9 @@ export class HomeComponent {
                   name: data.name || '',
                   isShared: data.isShared ?? false,
                   sharedFrom: data.sharedFrom ?? null,
-                  originalTripId: data.originalTripId ?? null 
+                  originalTripId: data.originalTripId ?? null, 
+                  currency: data.currency,
+                  currencyCode: data.currencyCode ?? null
                 };
               } else {
                 this.selectedTrip = { id: tripIdParam, name: '' };
@@ -168,7 +185,8 @@ export class HomeComponent {
                   name: data.name || '',
                   isShared: data.isShared ?? false,
                   sharedFrom: data.sharedFrom ?? null,
-                  originalTripId: data.originalTripId ?? null
+                  originalTripId: data.originalTripId ?? null,
+                  currencyCode: data.currencyCode ?? null
                 };
               } else {
                 this.selectedTrip = { id: history.state.tripId, name: history.state.tripName || ''};
@@ -258,6 +276,22 @@ export class HomeComponent {
     });  
   }
 
+  buildCurrencyList() {
+    const popularCodes = ['USD', 'EUR', 'GBP', 'JPY', 'CAD', 'AUD', 'INR', 'TWD'];
+    this.currencyOptions = [];
+
+    const addToList = (code: string) => {
+      const symbol = currencySymbolMap[code] || '';
+      this.currencyOptions.push({ symbol, code });
+    };
+
+    popularCodes.forEach(addToList);
+    Object.keys(currencySymbolMap)
+      .filter(code => !popularCodes.includes(code))
+      .sort()
+      .forEach(addToList);
+  }
+
   async loadTrips() {
     const uid = this.auth.uid;
     if (!uid) return;
@@ -276,7 +310,10 @@ export class HomeComponent {
                 const ownerTripDoc = await getDoc(doc(this.firestore, 'users', ownerUid, 'trips', ownerTripId));
                 console.log('Owner trip doc exists:', ownerTripDoc.exists());
                 if (ownerTripDoc.exists()) {
+                    const data = ownerTripDoc.data() as any;
                     trip.name = (ownerTripDoc.data() as any).name || trip.name;
+                    trip.currency = data.currency || trip.currency; 
+                    trip.currencyCode = data.currencyCode || trip.currencyCode;
                 }
             }
 
@@ -304,6 +341,12 @@ export class HomeComponent {
     this.trips = trips;
     this.applyTripsSort();
     this.cdr.detectChanges();
+  }
+
+  getDisplayCurrency(code: string | null | undefined): string {
+    if (!code) return '';
+    const symbol = currencySymbolMap[code] || '';
+    return `${code} ${symbol}`; 
   }
 
   applyTripsSort() {
@@ -345,13 +388,17 @@ export class HomeComponent {
     }
     try {
       const tripId = Date.now().toString();
-      const newTrip: Trip = { id: tripId, name: this.newTripName.trim(), dateRange: null };
+      const newTrip: Trip = { id: tripId, name: this.newTripName.trim(), dateRange: null, currency: null };
 
-      await setDoc(doc(this.firestore, 'users', uid, 'trips', tripId), { name: newTrip.name });
+      await setDoc(doc(this.firestore, 'users', uid, 'trips', tripId), { name: newTrip.name, currency: null });
       this.trips.push(newTrip);
       this.applyTripsSort();
       this.newTripName = '';
       this.showCreateTripForm = false;
+
+      this.pendingTripForCurrency = newTrip;
+      this.selectedCurrency = null;
+      this.showCurrencyModal = true;
       this.cdr.detectChanges();
   } catch (err) {
     console.error('Failed to create trip:', err);
@@ -361,7 +408,34 @@ export class HomeComponent {
       text: 'Failed to create trip. Please try again.'
     });
   }
-}
+ }
+  
+  async confirmCurrency() {
+    if (!this.selectedCurrencyCode) {
+      Toast.fire({
+        icon: 'error',
+        title: 'Please choose a currency.'
+      });
+      return;
+    }
+    if (!this.pendingTripForCurrency) {
+      this.showCurrencyModal = false;
+      return;
+    }
+    const uid = this.auth.uid;
+    if (uid) {
+      await setDoc(
+        doc(this.firestore, 'users', uid, 'trips', this.pendingTripForCurrency.id),
+        { currencyCode: this.selectedCurrencyCode },
+        { merge: true }
+      );
+    }
+    this.pendingTripForCurrency.currency = this.selectedCurrencyCode;
+    this.showCurrencyModal = false;
+    this.pendingTripForCurrency = null;
+    this.selectedCurrencyCode = null;
+    this.cdr.detectChanges();
+  }
 
   async openTrip(trip: Trip) {
     this.selectedTrip = trip;

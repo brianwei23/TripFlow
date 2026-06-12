@@ -249,9 +249,14 @@
           <button type="button" class="map-btn" (click)="openMapForNewActivity(day)">Pick Location (Map)</button>
           <input type="time" [(ngModel)]="day.tempActivity!.start" />
           <input type="time" [(ngModel)]="day.tempActivity!.end" />
-          <input type="number" placeholder="Expected cost" [(ngModel)]="day.tempActivity!.expectedCost" />
-          <input type="number" placeholder="Actual cost" [(ngModel)]="day.tempActivity!.actualCost" />
-
+          <div class="currency-input-wrapper">
+            <span class="currency-symbol">{{getDisplayCurrency(selectedTrip?.currencyCode)}}</span>
+            <input type="number" placeholder="Expected cost" [(ngModel)]="day.tempActivity!.expectedCost" />
+          </div>
+          <div class="currency-input-wrapper">
+            <span class="currency-symbol">{{getDisplayCurrency(selectedTrip?.currencyCode)}}</span>
+            <input type="number" placeholder="Actual cost" [(ngModel)]="day.tempActivity!.actualCost" />
+          </div>
           <button class="save-btn" (click)="saveActivity(day)">Save</button>
           <button type="button" class="cancel-btn" (click)="cancelAddActivity(day)">Cancel</button>
         </div>
@@ -267,9 +272,9 @@
                   <span class="activity-location"> <b>Location:</b> {{act.location}}</span>
                 }
                 <span class="activity-cost">
-                  <b>Expected cost:</b> ${{act.expectedCost | number:'1.2-2'}}
+                  <b>Expected cost:</b> {{getDisplayCurrency(selectedTrip?.currencyCode)}}{{act.expectedCost | number:'1.2-2'}}
                   @if (act.actualCost !== null && act.actualCost !== undefined) {
-                    <b>Actual Cost:</b> ${{act.actualCost}}
+                    <b>Actual Cost:</b> {{getDisplayCurrency(selectedTrip?.currencyCode)}}{{act.actualCost}}
                   }
                 </span>
                 <div style="display: flex; gap: 80x; align-items: stretch; justify-content: center; gap: 20px;">
@@ -294,8 +299,14 @@
                 <button type="button" class="map-btn" (click)="openMapForActivity(act)">Pick Location (Map)</button>
                 <input type="time" [(ngModel)]="act.temp!.start" />
                 <input type="time" [(ngModel)]="act.temp!.end" />
-                <input type="number" [(ngModel)]="act.temp!.expectedCost" placeholder="Expected cost" />
-                <input type="number" [(ngModel)]="act.temp!.actualCost" placeholder="Actual cost" />
+                <div class="currency-input-wrapper">
+                  <span class="currency-symbol">{{getDisplayCurrency(selectedTrip?.currencyCode)}}</span>  
+                  <input type="number" [(ngModel)]="act.temp!.expectedCost" placeholder="Expected cost" />
+                </div>
+                <div class="currency-input-wrapper">
+                  <span class="currency-symbol">{{getDisplayCurrency(selectedTrip?.currencyCode)}}</span>
+                  <input type="number" [(ngModel)]="act.temp!.actualCost" placeholder="Actual cost" />
+                </div>
                 <div>
                   <button class="save-btn" (click)="saveEditedActivity(day, act)">Save</button>
                   <button class="cancel-btn" (click)="cancelEditActivity(act)">Cancel</button>
@@ -309,8 +320,8 @@
     <div class="day-summary">
       <h3>TripFlow Summary for the Day</h3>
       <div class="summary-stats">
-        <p><b>Expected:</b> ${{getExpectedTotalCost(day) | number:'1.2-2'}}</p>
-        <p><b>Actual:</b> ${{getActualTotalCost(day) | number:'1.2-2'}}</p>
+        <p><b>Expected:</b> {{getDisplayCurrency(selectedTrip?.currencyCode)}}{{getExpectedTotalCost(day) | number:'1.2-2'}}</p>
+        <p><b>Actual:</b> {{getDisplayCurrency(selectedTrip?.currencyCode)}}{{getActualTotalCost(day) | number:'1.2-2'}}</p>
         <p><b>Difference:</b> {{getBudgetDifferencePercent(day) | number:'1.0-1'}}%</p>
         <p><b>Planning Accuracy:</b> {{getPlanningAccuracyScore(day) * 100 | number:'1.0-0'}}%</p>
       </div>
@@ -391,6 +402,28 @@
             <button class="add-trip-btn" style="font-size:18px; margin:0; padding:6px 14px;" (click)="shareWithUser(user.uid, user.username)">Share</button>
           </div>
         }
+      </div>
+    </div>
+  </div>
+}
+
+@if (showCurrencyModal) {
+  <div class="booking-popup-overlay" (click)="showCurrencyModal = false">
+    <div class="booking-popup" style="width: 340px;" (click)="$event.stopPropagation()">
+      <div class="booking-popup-header">
+        <span>Select Trip Currency</span>
+      </div>
+      <div class="booking-popup-body" style="padding: 24px 18px;">
+        <p style="font-size: 18px; text-align: center; margin: 0 0 16px 0; color: #444;">
+          Choose the currency for <b>{{pendingTripForCurrency?.name}}</b>:
+        </p>
+        <select [(ngModel)]="selectedCurrencyCode" style="width: 100%; font-size: 20px; padding: 10px; border-radius: 6px; border: 1px solid #ccc; margin-bottom: 16px; background-color: white;">
+          <option [ngValue]="null" disabled>Select a currency...</option>
+          @for (curr of currencyOptions; track curr.code) {
+            <option [value]="curr.code">{{curr.symbol}} ({{curr.code}})</option>
+          }
+        </select>
+        <button class="save-btn" style="width: 100%; margin: 0; font-size: 22px; opacity: 1;" (click)="confirmCurrency()">Confirm</button>
       </div>
     </div>
   </div>
