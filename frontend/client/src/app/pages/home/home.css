@@ -275,31 +275,57 @@ h3 {
 }
 
 .currency-input-wrapper {
-    position: relative;
     display: flex;
     align-items: center;
+    gap: 8px;
     width: 100%;
     margin: 4px 0;
 }
 
 .currency-input-wrapper .currency-symbol {
-    position: absolute;
-    left: 14px;
     font-size: 18px;
     color: #555;
-    pointer-events: none;
-    z-index: 1;
+    white-space: nowrap;
+    flex-shrink: 0;
+    min-width: 48px;
+    text-align: right;
 }
 
 .activity-summary .currency-input-wrapper .currency-symbol {
     font-size: 20px;
-    left: 16px;
 }
 
 .currency-input-wrapper input[type="number"] {
-    padding-left: 80px !important;
-    width: 100%;
+    padding-left: 12px !important;
+    flex: 1;
+    min-width: 0;
     margin: 0 !important;
+}
+
+.currency-change-btn {
+    position: absolute;
+    top: 18px;
+    right: 300px;
+    z-index: 1000;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background-color: rgb(213, 185, 23);
+    color: white;
+    font-size: 22px;
+    font-weight: bold;
+    border: none;
+    cursor: pointer;
+    opacity: 0.6;
+    transition: background-color 0.3s, opacity 0.3s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.currency-change-btn:hover {
+    background-color: #388e3c;
+    opacity: 1;
 }
 
 .logout-btn {
@@ -312,7 +338,7 @@ h3 {
     border-radius: 6px;
     cursor: pointer;
     transition: background-color 0.3s;
-    position: fixed;
+    position: absolute;
     top: 20px;
     right: 140px;
     z-index: 1000;

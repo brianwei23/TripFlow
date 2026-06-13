@@ -142,6 +142,9 @@ export class HomeComponent {
   selectedCurrency: string | null = null;
   selectedCurrencyCode: string | null = null;
 
+  costSplit: { total: number; people: number; perPerson: number } | null = null;
+  isNewTripCurrency = false;
+
   ngOnInit() {
     this.buildCurrencyList();
     this.route.params.subscribe(async params => {
@@ -259,7 +262,8 @@ export class HomeComponent {
                 name: data.name || '',
                 isShared: data.isShared ?? false,
                 sharedFrom: data.sharedFrom ?? null,
-                originalTripId: data.originalTripId ?? null
+                originalTripId: data.originalTripId ?? null,
+                currencyCode: data.currencyCode ?? null
               };
             }
           }
@@ -346,7 +350,31 @@ export class HomeComponent {
   getDisplayCurrency(code: string | null | undefined): string {
     if (!code) return '';
     const symbol = currencySymbolMap[code] || '';
+    if (symbol === code) return symbol;
     return `${code} ${symbol}`; 
+  }
+
+  async getTripCostSplit(): Promise<{ total: number; people: number; perPerson: number }> {
+    if (!this.selectedTrip) return { total: 0, people: 1, perPerson: 0 };
+
+    const uid = this.auth.uid;
+    const ownerUid = this.selectedTrip.isShared ? this.selectedTrip.sharedFrom! : uid;
+    const tripId = this.selectedTrip.isShared ? this.selectedTrip.originalTripId! : this.selectedTrip.id;
+
+    const tripDoc = await getDoc(doc(this.firestore, 'users', ownerUid, 'trips', tripId));
+    const sharedWith: string[] = tripDoc.exists() ? ((tripDoc.data() as any).sharedWith ?? []) : [];
+    const people = 1 + sharedWith.length;
+
+    const daysCol = collection(this.firestore, 'users', ownerUid, 'trips', tripId, 'days');
+    const daysSnap = await getDocs(daysCol);
+    let total = 0;
+    for (const dayDoc of daysSnap.docs) {
+      const data = dayDoc.data() as PersistedDayPlan;
+      for (const act of data.activities ?? []) {
+        total += act.actualCost ?? 0;
+      }
+    }
+    return { total, people, perPerson: people > 0 ? total / people : 0 };
   }
 
   applyTripsSort() {
@@ -398,6 +426,7 @@ export class HomeComponent {
 
       this.pendingTripForCurrency = newTrip;
       this.selectedCurrency = null;
+      this.isNewTripCurrency = true;
       this.showCurrencyModal = true;
       this.cdr.detectChanges();
   } catch (err) {
@@ -430,15 +459,47 @@ export class HomeComponent {
         { merge: true }
       );
     }
+    this.pendingTripForCurrency.currencyCode = this.selectedCurrencyCode;
     this.pendingTripForCurrency.currency = this.selectedCurrencyCode;
+
+    if (this.selectedTrip?.id === this.pendingTripForCurrency.id) {
+      this.selectedTrip.currencyCode = this.selectedCurrencyCode;
+      this.selectedTrip.currency = this.selectedCurrencyCode;
+    }
+
     this.showCurrencyModal = false;
     this.pendingTripForCurrency = null;
     this.selectedCurrencyCode = null;
     this.cdr.detectChanges();
   }
 
+  async changeCurrency() {
+    if (!this.selectedTrip) return;
+    this.selectedCurrencyCode = this.selectedTrip.currencyCode ?? null;
+    this.pendingTripForCurrency = this.selectedTrip;
+    this.isNewTripCurrency = false;
+    this.costSplit = null;
+    this.showCurrencyModal = true;
+    this.cdr.detectChanges();
+    this.costSplit = await this.getTripCostSplit();
+    this.cdr.detectChanges();
+  }
+
   async openTrip(trip: Trip) {
     this.selectedTrip = trip;
+
+    const uid = this.auth.uid;
+    if (uid) {
+      const tripDoc = await getDoc(doc(this.firestore, 'users', uid, 'trips', trip.id));
+      if (tripDoc.exists()) {
+        const data = tripDoc.data() as any;
+        this.selectedTrip = {
+          ...trip,
+          currencyCode: data.currencyCode ?? null,
+          currency: data.currency ?? null
+        };
+      }
+    }
     this.viewMode = 'days';
     await this.loadAllDays();
     window.history.replaceState({}, '', '/home?tripId=' + trip.id);
@@ -550,6 +611,13 @@ export class HomeComponent {
     this.cdr.detectChanges();
   }
 
+  closeCurrencyModal() {
+    this.showCurrencyModal = false;
+    this.pendingTripForCurrency = null;
+    this.selectedCurrencyCode = null;
+    this.cdr.detectChanges();
+  }
+
   closeShareTripPopup() {
     this.showShareTripPopup = false;
     this.cdr.detectChanges();
@@ -591,7 +659,8 @@ export class HomeComponent {
       name: this.selectedTrip.name,
       sharedFrom: ownerUid,
       originalTripId: tripId,
-      isShared: true
+      isShared: true,
+      currencyCode: this.selectedTrip.currencyCode ?? null
     });
 
     const ownerTripDoc = await getDoc(doc(this.firestore, 'users', ownerUid, 'trips', tripId));
@@ -1299,7 +1368,8 @@ export class HomeComponent {
         expectedTotal: this.getExpectedTotalCost(day),
         actualTotal: this.getActualTotalCost(day),
         planningAccuracy: this.getPlanningAccuracyScore(day),
-      }
+      },
+      currencyDisplay: this.getDisplayCurrency(this.selectedTrip?.currencyCode) || 'USD'
     };
 
     try {
@@ -1388,6 +1458,7 @@ export class HomeComponent {
       dayStart: "08:00",
       dayEnd: "21:00",
       locationContext: this.autofillLocation || this.selectedTrip?.name,
+      currencyDisplay: this.getDisplayCurrency(this.selectedTrip?.currencyCode) || 'USD'
     };
 
     try {
@@ -1487,7 +1558,8 @@ export class HomeComponent {
           dayEnd: '21:00',
           locationContext: this.aiTripLocation.trim(),
           dayIndex: i,
-          usedCities: [...usedCities]
+          usedCities: [...usedCities],
+          currencyDisplay: this.getDisplayCurrency(this.selectedTrip?.currencyCode) || 'USD'
         };
 
         let success = false;

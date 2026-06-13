@@ -2,6 +2,10 @@
 
 <button class="logout-btn" (click)="logout()">Logout</button>
 
+@if (viewMode === 'days') {
+  <button class="currency-change-btn" (click)="changeCurrency()">$</button>
+}
+
 @if (viewMode === 'trips') {
   <div class="trips-header">
     <h2>My Trips</h2>
@@ -412,6 +416,7 @@
     <div class="booking-popup" style="width: 340px;" (click)="$event.stopPropagation()">
       <div class="booking-popup-header">
         <span>Select Trip Currency</span>
+        <button class="close-btn-x" (click)="closeCurrencyModal()">X</button>
       </div>
       <div class="booking-popup-body" style="padding: 24px 18px;">
         <p style="font-size: 18px; text-align: center; margin: 0 0 16px 0; color: #444;">
@@ -424,6 +429,35 @@
           }
         </select>
         <button class="save-btn" style="width: 100%; margin: 0; font-size: 22px; opacity: 1;" (click)="confirmCurrency()">Confirm</button>
+
+        @if (!isNewTripCurrency) {
+          <div style="width:100%; margin-top: 20px; padding-top: 16px; border-top: 1px solid #eee;">
+            <p style="font-size: 19px; font-weight: 700; text-align: center; margin: 0 0 10px 0; color: #333;">
+              Actual Cost Split
+            </p>
+            @if (!costSplit) {
+              <div style="display:flex; justify-content:center; align-items:center; gap:8px; padding: 8px 0;">
+                <div class="spinner-small"></div>
+                <span style="font-size:16px; color:#888;">Calculating...</span>
+              </div>
+            } @else {
+              <div style="font-size: 19px; align-items: center; color: #444; display: flex; flex-direction: column; gap: 8px;">
+                <p style="margin:0;">
+                  <b>Total actual cost:</b> {{getDisplayCurrency(selectedTrip?.currencyCode)}}{{costSplit.total | number:'1.2-2'}}
+                </p>
+                <p style="margin:0;">
+                  <b>Group Size:</b> {{costSplit.people}} {{costSplit.people === 1 ? 'person' : 'people' }}
+                </p>
+                <p style="margin:0; font-size:19px; color:#2e7d32;">
+                  <b>Per person:</b> {{getDisplayCurrency(selectedTrip?.currencyCode)}}{{costSplit.perPerson | number:'1.2-2'}}
+                </p>
+                <p style="margin: 6px 0 0 0; font-size: 19px; color: #999; font-style: italic;">
+                  Based on actual costs on all days.
+                </p>
+              </div>
+            }
+          </div>
+        }
       </div>
     </div>
   </div>

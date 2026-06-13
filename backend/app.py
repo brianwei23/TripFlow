@@ -87,29 +87,31 @@ def analyze_day():
             "Content-Type": "application/json"
         }
 
+        currency_display = data.get('currencyDisplay', 'USD')
+
         prompt = f"""
-        Analyze the travel schedule and give good advice:
+            Analyze the travel schedule and give good advice:
 
-        Date: {data.get('date', 'Unknown')}
+            Date: {data.get('date', 'Unknown')}
 
-        Activities:
-        {data.get('activities', [])}
+            Activities:
+            {data.get('activities', [])}
 
-        Metrics: 
-        {data.get('metrics', {})}
+            Metrics: 
+            {data.get('metrics', {})}
 
-        Please give:
-        - Tourist destination feedback and suggestions
-        - Time management feedback
-        - Budget feedback
-        - Cost efficiency feedback
-        - Feasibility
-        - Best ways to navigate to each location/activity. Be specific.
-        - Best airline and cheapest flights according to which month/date/time. Best hotels in the area. Make it specific to the situation.
-        - Overall planning score (1-100)
-        - And anything else important
-        - REMEMBER all costs are in USD
-        """
+            Please give:
+            - Tourist destination feedback and suggestions
+            - Time management feedback
+            - Budget feedback
+            - Cost efficiency feedback
+            - Feasibility
+            - Best ways to navigate to each location/activity. Be specific.
+            - Best airline and cheapest flights according to which month/date/time. Best hotels in the area. Make it specific to the situation.
+            - Overall planning score (1-100)
+            - And anything else important
+            - REMEMBER all costs are in {currency_display}. Use {currency_display} for any cost estimates or references.
+            """
 
         response = requests.post(
             "https://openrouter.ai/api/v1/chat/completions",
@@ -155,6 +157,8 @@ def autofill_day():
     used_cities = data.get('usedCities', [])
     used_cities_str = ', '.join(used_cities) if used_cities else 'None'
 
+    currency_display = data.get('currencyDisplay', 'USD')
+
     prompt = f"""
     Task: Fill these empty time slots with travel activities for day {day_index + 1}. Make it so that it fills MOST of the day between 7AM and 9PM.
     {location_instruction}
@@ -169,7 +173,7 @@ def autofill_day():
     4. Be a bit specific on activity locations and names. For example, you can include city name, state/province, or country in location. 
     Location must also include the name of the point of interest.
     5. Create ACCURATE latitute and longitude coordinates for each location, and put it in the 'coords' object.
-    6. Make sure the schedule flows perfectly and is feasible. Make sure locations and landmarks are real. All costs are in USD.
+    6. Make sure the schedule flows perfectly and is feasible. Make sure locations and landmarks are real. All costs are in {currency_display}.
     7. Make sure to suggest points of interest in various areas in the location provided and not to focus only on one city/area. For example, if Australia is the location, it should contain activities in Sydney, Darwin, Perth, Melbourne, etc.
        You must pick a different city or region from these cities already used: {used_cities_str}.
     8. Look at the last city and the previous cities visited in the list above. Pick a city that is logical to travel to next. Do not start jumping back and forth. Ensure a smooth trip.
