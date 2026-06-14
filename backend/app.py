@@ -117,7 +117,7 @@ def analyze_day():
             "https://openrouter.ai/api/v1/chat/completions",
             headers=headers,
             json={
-                "model": "arcee-ai/trinity-mini:free",
+                "model": "nvidia/nemotron-3-nano-30b-a3b:free",
                 "messages": [
                     {
                         "role": "user", "content": prompt
