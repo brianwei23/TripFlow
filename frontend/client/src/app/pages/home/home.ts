@@ -418,14 +418,13 @@ export class HomeComponent {
       const tripId = Date.now().toString();
       const newTrip: Trip = { id: tripId, name: this.newTripName.trim(), dateRange: null, currency: null };
 
-      await setDoc(doc(this.firestore, 'users', uid, 'trips', tripId), { name: newTrip.name, currency: null });
-      this.trips.push(newTrip);
-      this.applyTripsSort();
+      
       this.newTripName = '';
       this.showCreateTripForm = false;
 
       this.pendingTripForCurrency = newTrip;
       this.selectedCurrency = null;
+      this.selectedCurrencyCode = null;
       this.isNewTripCurrency = true;
       this.showCurrencyModal = true;
       this.cdr.detectChanges();
@@ -452,21 +451,53 @@ export class HomeComponent {
       return;
     }
     const uid = this.auth.uid;
+
     if (uid) {
-      await setDoc(
-        doc(this.firestore, 'users', uid, 'trips', this.pendingTripForCurrency.id),
-        { currencyCode: this.selectedCurrencyCode },
-        { merge: true }
-      );
-    }
-    this.pendingTripForCurrency.currencyCode = this.selectedCurrencyCode;
-    this.pendingTripForCurrency.currency = this.selectedCurrencyCode;
+      if (this.isNewTripCurrency) {
+        await setDoc(
+          doc(this.firestore, 'users', uid, 'trips', this.pendingTripForCurrency.id),
+          { name: this.pendingTripForCurrency.name, currencyCode: this.selectedCurrencyCode, currency: null }
+        );
+        this.pendingTripForCurrency.currencyCode = this.selectedCurrencyCode;
+        this.trips.push(this.pendingTripForCurrency);
+        this.applyTripsSort();
+      } else {
+        const ownerUid = this.pendingTripForCurrency.isShared
+          ? this.pendingTripForCurrency.sharedFrom!
+          : uid;
+        const tripId = this.pendingTripForCurrency.isShared
+          ? this.pendingTripForCurrency.originalTripId!
+          : this.pendingTripForCurrency.id;
 
-    if (this.selectedTrip?.id === this.pendingTripForCurrency.id) {
-      this.selectedTrip.currencyCode = this.selectedCurrencyCode;
-      this.selectedTrip.currency = this.selectedCurrencyCode;
+        await setDoc(
+          doc(this.firestore, 'users', ownerUid, 'trips', tripId),
+          { currencyCode: this.selectedCurrencyCode },
+          { merge: true }
+        );
+
+        const ownerTripDoc = await getDoc(doc(this.firestore, 'users', ownerUid, 'trips', tripId));
+        const sharedWith: string[] = ownerTripDoc.exists()
+          ? ((ownerTripDoc.data() as any).sharedWith ?? [])
+          : [];
+      
+        await Promise.all(sharedWith.map(memberUid => 
+          setDoc(
+            doc(this.firestore, 'users', memberUid, 'trips', tripId),
+            { currencyCode: this.selectedCurrencyCode },
+            { merge: true }
+          )
+        ));
+        this.pendingTripForCurrency.currencyCode = this.selectedCurrencyCode;
+        this.pendingTripForCurrency.currency = this.selectedCurrencyCode;
+
+        if (this.selectedTrip?.id === this.pendingTripForCurrency.id || this.selectedTrip?.originalTripId === tripId) {
+          this.selectedTrip!.currencyCode = this.selectedCurrencyCode;
+          this.selectedTrip!.currency = this.selectedCurrencyCode;
+        }
+      }
     }
 
+    this.isNewTripCurrency = false;
     this.showCurrencyModal = false;
     this.pendingTripForCurrency = null;
     this.selectedCurrencyCode = null;
@@ -612,9 +643,13 @@ export class HomeComponent {
   }
 
   closeCurrencyModal() {
+    if (this.isNewTripCurrency && this.pendingTripForCurrency) {
+      this.trips = this.trips.filter(t => t.id !== this.pendingTripForCurrency!.id);
+    }
     this.showCurrencyModal = false;
     this.pendingTripForCurrency = null;
     this.selectedCurrencyCode = null;
+    this.isNewTripCurrency = false;
     this.cdr.detectChanges();
   }
 
@@ -1394,9 +1429,23 @@ export class HomeComponent {
   formatAIResponse(text: string): string {
     if (!text) return '';
     let formatted = text;
-    // Ensure bold font if it's in response
+    // Bold
     formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+    // Italic
+    formatted = formatted.replace(/\*(.*?)\*/g, '<em>$1</em>');
+    // Headers (##, ###, ####)
+    formatted = formatted.replace(/^#{1,6}\s+(.*)$/gm, '<strong>$1</strong>');
+    // Remove horizontal rules (--- or ***)
+    formatted = formatted.replace(/^[-*]{3,}$/gm, '');
+    // Table rows — strip | and extra dashes
+    formatted = formatted.replace(/^\|[-| :]+\|$/gm, '');
+    formatted = formatted.replace(/\|/g, '  ');
+    // Remove leading dashes used as bullet points
+    formatted = formatted.replace(/^[-•]\s+/gm, '');
+    // Newlines to <br>
+    formatted = formatted.replace(/\n{2,}/g, '<br><br>');
     formatted = formatted.replace(/\n/g, '<br>');
+
     return formatted;
   }
 
