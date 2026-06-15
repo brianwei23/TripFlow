@@ -28,13 +28,14 @@ interface Activity {
   id?: string; // For activities with duplicate names
   start?: string;
   end?: string;
-  expectedCost?: number;
+  expectedCost?: number | null;
   location?: string;
   coords?: {
     lat: number;
     lng: number;
   } | null;
   actualCost?: number | null;
+  notes?: string | null;
   isEditing?: boolean;
   source?: 'user' | 'ai';
   temp?: Activity;
@@ -726,10 +727,11 @@ export class HomeComponent {
         id: act.id,
         start: act.start,
         end: act.end,
-        expectedCost: act.expectedCost,
+        expectedCost: act.expectedCost !== undefined ? act.expectedCost : null,
         location: act.location || '',
         coords: act.coords || null,
-        actualCost: act.actualCost !== undefined ? act.actualCost : null
+        actualCost: act.actualCost !== undefined ? act.actualCost : null,
+        notes: act.notes || null
       }))
     };
     const docRef = doc(this.firestore, 'users', ownerUid, 'trips', tripId, 'days', day.date);
@@ -794,7 +796,8 @@ export class HomeComponent {
       expectedCost: act.expectedCost,
       location: act.location,
       coords: act.coords ?? null,
-      actualCost: act.actualCost
+      actualCost: act.actualCost,
+      notes: act.notes ?? null
     };
     this.cdr.detectChanges();
   }
@@ -809,14 +812,14 @@ export class HomeComponent {
   saveEditedActivity(day: DayPlan, act: Activity) {
     const temp = act.temp;
     if (!temp) return;
-    if (!temp.name || !temp.start || !temp.end || temp.expectedCost == undefined || temp.expectedCost == null) {
+    if (!temp.name || !temp.start || !temp.end) {
       Toast.fire({
         icon: 'error',
-        title: 'Activity name, times, and expected cost must be filled.'
+        title: 'Activity name and times must be filled.'
       });
       return;
     }
-    if (temp.expectedCost < 0 || (temp.actualCost != null && temp.actualCost < 0)) {
+    if ((temp.expectedCost != null && temp.expectedCost < 0) || (temp.actualCost != null && temp.actualCost < 0)) {
       Toast.fire({
         icon: 'error',
         title: 'Cost cannot be less than 0.',
@@ -838,6 +841,7 @@ export class HomeComponent {
     act.location = temp.location;
     act.coords = temp.coords ?? null;
     act.actualCost = temp.actualCost;
+    act.notes = temp.notes ?? null;
 
     day.activities.sort((a, b) => (a.start || "").localeCompare(b.start || ""));
 
@@ -1027,10 +1031,10 @@ export class HomeComponent {
       return;
     }
 
-    if (act.expectedCost === undefined || act.expectedCost === null || act.expectedCost < 0 || (act.actualCost != null && act.actualCost < 0)) {
+    if ((act.expectedCost !== undefined && act.expectedCost !== null && act.expectedCost < 0) || (act.actualCost != null && act.actualCost < 0)) {
       Toast.fire({
         icon: 'error',
-        title: 'Please enter a valid cost.',
+        title: 'Cost must be at least 0.',
       });
       return;
     }

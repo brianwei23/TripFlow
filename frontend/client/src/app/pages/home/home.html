@@ -261,6 +261,12 @@
             <span class="currency-symbol">{{getDisplayCurrency(selectedTrip?.currencyCode)}}</span>
             <input type="number" placeholder="Actual cost" [(ngModel)]="day.tempActivity!.actualCost" />
           </div>
+          <textarea
+            class="notes-input"
+            placeholder="Notes"
+            [(ngModel)]="day.tempActivity!.notes"
+            style="padding: 12px; font-size: 21px; border: 1px solid #ccc; border-radius: 6px; resize: vertical; min-height: 80px; font-family: inherit;">
+          </textarea>
           <button class="save-btn" (click)="saveActivity(day)">Save</button>
           <button type="button" class="cancel-btn" (click)="cancelAddActivity(day)">Cancel</button>
         </div>
@@ -276,9 +282,16 @@
                   <span class="activity-location"> <b>Location:</b> {{act.location}}</span>
                 }
                 <span class="activity-cost">
-                  <b>Expected cost:</b> {{getDisplayCurrency(selectedTrip?.currencyCode)}}{{act.expectedCost | number:'1.2-2'}}
+                  @if (act.expectedCost !== null && act.expectedCost !== undefined) {
+                    <b>Expected cost:</b> {{getDisplayCurrency(selectedTrip?.currencyCode)}}{{act.expectedCost | number:'1.2-2'}}
+                  }
                   @if (act.actualCost !== null && act.actualCost !== undefined) {
                     <b>Actual Cost:</b> {{getDisplayCurrency(selectedTrip?.currencyCode)}}{{act.actualCost}}
+                  }
+                  @if (act.notes) {
+                    <div class="notes-container">
+                      <b>Notes:</b> {{act.notes}}
+                    </div>
                   }
                 </span>
                 <div style="display: flex; gap: 80x; align-items: stretch; justify-content: center; gap: 20px;">
@@ -311,6 +324,12 @@
                   <span class="currency-symbol">{{getDisplayCurrency(selectedTrip?.currencyCode)}}</span>
                   <input type="number" [(ngModel)]="act.temp!.actualCost" placeholder="Actual cost" />
                 </div>
+                <textarea
+                  class="notes-input"
+                  placeholder="Notes"
+                  [(ngModel)]="act.temp!.notes"
+                  style="padding: 12px; font-size: 21px; border: 1px solid #ccc; border-radius: 6px; resize: vertical; min-height: 80px; font-family: inherit;">
+                </textarea>
                 <div>
                   <button class="save-btn" (click)="saveEditedActivity(day, act)">Save</button>
                   <button class="cancel-btn" (click)="cancelEditActivity(act)">Cancel</button>

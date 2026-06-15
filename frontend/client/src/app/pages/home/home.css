@@ -449,6 +449,22 @@ h3 {
     font-size: 20px;
 }
 
+.notes-container {
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 10px;
+}
+
+.notes-input {
+    width: 95%;
+    min-height: 200px;
+    height: 300px;
+    padding: 12px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    resize: vertical;
+}
+
 .save-btn {
     padding: 6px 14px;
     background-color: #008cba;
