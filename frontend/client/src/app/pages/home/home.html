@@ -294,7 +294,7 @@
                     </div>
                   }
                 </span>
-                <div style="display: flex; gap: 80x; align-items: stretch; justify-content: center; gap: 20px;">
+                <div style="display: flex; align-items: stretch; justify-content: center; gap: 8px; margin-bottom: -10px;">
                   <button class="weather-btn" (click)="openWeather(day, act.coords)">
                     ☀️ Weather
                   </button>
@@ -305,7 +305,7 @@
                   }
                 </div>
                 <div>
-                  <button class="edit-btn" (click)="editActivity(act)">Edit</button>
+                  <button class="edit-btn" style="margin-left: 12px;" (click)="editActivity(act)">Edit</button>
                   <button class="delete-btn" (click)="deleteActivity(day, act)">Delete</button>
                 </div>
               }
