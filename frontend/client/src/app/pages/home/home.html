@@ -140,13 +140,27 @@
   </div>
 
   <div style="text-align:center; margin-bottom: 16px;">
+    <label class="sort-text">
+      <input class="sort-checkbox" type="checkbox" [(ngModel)]="switchDaysMode" (change)="toggleSwitchDaysMode()" />
+      Switch days
+    </label>
+  </div>
+
+  @if (switchDaysMode && selectedDaysToSwitch.length === 2) {
+    <div style="text-align:center; margin-bottom: 16px;">
+      <button class="save-btn" style="opacity: 0.5;" (click)="confirmDaySwitch()">Confirm Switch</button>
+    </div>
+  }
+
+  <div style="text-align:center; margin-bottom: 16px;">
     <button class="add-day-btn" (click)="openTripMap()">View Trip Map</button>
   </div>
 
   <div class="days-container">
     @for (day of days; track day.date) {
-      <div class="day-tile" (click)="goToDay(day.date)">
-        <h3>{{formatDayLabel(day.date)}}</h3>
+      <div class="day-tile"
+        [style.border]="selectedDaysToSwitch.includes(day.date) ? '3px solid #2196f3' : '1px solid #ddd'"
+        (click)="handleDayTileClick(day.date)"> <h3>{{formatDayLabel(day.date)}}</h3>
       </div>
     }
     @if (days.length === 0) {

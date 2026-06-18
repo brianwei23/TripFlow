@@ -146,6 +146,9 @@ export class HomeComponent {
   costSplit: { total: number; people: number; perPerson: number } | null = null;
   isNewTripCurrency = false;
 
+  switchDaysMode = false;
+  selectedDaysToSwitch: string[] = [];
+
   ngOnInit() {
     this.buildCurrencyList();
     this.route.params.subscribe(async params => {
@@ -760,13 +763,11 @@ export class HomeComponent {
     };
   }
 
-
   showCurrentDay() {
     return this.currentDayIndex >= 0 && this.currentDayIndex < this.days.length
       ? [this.days[this.currentDayIndex]]
       : [];
   }
-
 
   toggleSortRecent() {
     const sorted = [...this.days].sort((a, b) => {
@@ -777,6 +778,63 @@ export class HomeComponent {
     this.cdr.detectChanges();
   }
 
+  toggleSwitchDaysMode() {
+    this.selectedDaysToSwitch = [];
+    this.cdr.detectChanges();
+  }
+
+  selectDayForSwitch(date: string) {
+    if (!this.switchDaysMode) return;
+
+    const index = this.selectedDaysToSwitch.indexOf(date);
+    if (index !== -1) {
+      this.selectedDaysToSwitch.splice(index, 1);
+    } else {
+      if (this.selectedDaysToSwitch.length < 2) {
+        this.selectedDaysToSwitch.push(date);
+      }
+    }
+    this.cdr.detectChanges();
+  }
+
+  async confirmDaySwitch() {
+    if (this.selectedDaysToSwitch.length !== 2 || !this.selectedTrip) return;
+
+    const [dateA, dateB] = this.selectedDaysToSwitch;
+    const uid = this.auth.uid;
+    const ownerUid = this.selectedTrip.isShared ? this.selectedTrip.sharedFrom! : uid;
+    const tripId = this.selectedTrip.isShared ? this.selectedTrip.originalTripId! : this.selectedTrip.id;
+
+    const dayA = this.days.find(d => d.date === dateA);
+    const dayB = this.days.find(d => d.date === dateB);
+
+    if (!dayA || !dayB) return;
+
+    // Swap trip plans between days in Firestore
+    const docRefA = doc(this.firestore, 'users', ownerUid, 'trips', tripId, 'days', dateA);
+    const docRefB = doc(this.firestore, 'users', ownerUid, 'trips', tripId, 'days', dateB);
+
+    await setDoc(docRefA, { date: dateA, activities: dayB.activities });
+    await setDoc(docRefB, { date: dateB, activities: dayA.activities });
+
+    const tempActivities = dayA.activities;
+    dayA.activities = dayB.activities;
+    dayB.activities = tempActivities;
+
+    this.selectedDaysToSwitch = [];
+    this.switchDaysMode = false;
+
+    Toast.fire({ icon: 'success', title: 'Days have been switched.' });
+    this.cdr.detectChanges();
+  }
+
+  async handleDayTileClick(date: string) {
+    if (this.switchDaysMode) {
+      this.selectDayForSwitch(date);
+    } else {
+      await this.goToDay(date);
+    }
+  }
 
   navigateExistingDay(direction: 'next' | 'prev') {
     if (direction === 'next' && this.currentDayIndex < this.days.length - 1) {
