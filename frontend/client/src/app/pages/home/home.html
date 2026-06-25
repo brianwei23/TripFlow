@@ -97,14 +97,14 @@
         type="number"
         [(ngModel)]="generalDayStart"
         min="1"
-        style="width: 60px; padding: 6px; border-radius: 4px; border: 1px solid #ccc;"
+        style="width: 35px; padding: 6px; border-radius: 4px; border: 1px solid #ccc;"
       />
       <span style="font-size: 24px;"><b>to Day</b></span>
       <input
         type="number"
         [(ngModel)]="generalDayEnd"
         min="1"
-        style="width: 60px; padding: 6px; border-radius: 4px; border: 1px solid #ccc;"
+        style="width: 35px; padding: 6px; border-radius: 4px; border: 1px solid #ccc;"
       />
       <button class="add-day-btn" (click)="createGeneralDayRange()" style="margin-left: 10px;">Create Days</button>
     </div>
@@ -308,7 +308,8 @@
                     </div>
                   }
                 </span>
-                <div style="display: flex; align-items: stretch; justify-content: center; gap: 8px; margin-bottom: -10px;">
+                <div style="display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: -10px;">
+                  <button class="activity-icon-btn edit-icon-btn" (click)="editActivity(act)">✏️</button>
                   <button class="weather-btn" (click)="openWeather(day, act.coords)">
                     ☀️ Weather
                   </button>
@@ -317,10 +318,7 @@
                       📍 Details
                     </button>
                   }
-                </div>
-                <div>
-                  <button class="edit-btn" style="margin-left: 12px;" (click)="editActivity(act)">Edit</button>
-                  <button class="delete-btn" (click)="deleteActivity(day, act)">Delete</button>
+                  <button class="activity-icon-btn delete-icon-btn" (click)="deleteActivity(day, act)">🗑️</button>
                 </div>
               }
               @else {
