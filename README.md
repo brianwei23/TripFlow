@@ -6,7 +6,7 @@ If you would like to use the site on your phone, scan this QR code. Using a comp
 ![site-qrcode](images/site-qrcode.png)
 
 ## Updates
-These updates were made after the YouTube video was created (see below). So the effects of the updates are not in the video.
+To see the video showcasing these updates, see: https://www.youtube.com/watch?v=Mx6kIeurxv0
 
 ### 4/23/2026
 * Added QR code functionality for **Attractions**, **Hotels**, **Car Rentals**, and **Find Flights**.
@@ -26,18 +26,39 @@ These updates were made after the YouTube video was created (see below). So the 
 * Below is an example of a trip map for a five-day Spain trip:
 ![tripmap-example](images/tripmap-example.png)
 
+## 6/24/2026
+* In the trip map, clicking on a day pin will bring up all the activity pins at their locations for that day. Route lines between each activity appear as well.
+
+* Users can now share trips to others. Shared users will have edit access, which allows collaboration.
+
+* Users can now set a specific currency when creating a trip. You can edit the currency in an existing trip as well by clicking on the circular `$` button when you are in your trip. Clicking on the button also shows you how much each person in the group needs to pay (`actual costs from all days of the trip / group size`). Expected cost is now an optional field.
+
+* Notes can be added when adding or editing activities.
+
+* Users can switch the plans of two days easily.
+
+* Some minor UI changes.
+
 ## Directions and Video Demo
 To use **TripFlow** please enter https://tripflow-app-d3e2c.web.app/login or use the QR code above. Then register your account with a valid email. Firebase will then send you a verification email. 
 
 Once you log in, you can create a trip and set up the dates. You can add/edit an activity. Each activity contains a weather button which takes coordinates from the map. The weather feature only works if you select the location from the map or create a trip using AI. Details button reveals more info about the point of interest in Google Maps. 
 
+To share a trip, click on the `Share` button when you are in your trip page. Then enter in the email of the recipient (must be registered in TripFlow prior). The trip will automatically show up in the recipient's side with the `(Shared)` tag. Shared users will have full edit access.
+
 You can also find flights, hotels, tours, and car rentals by clicking on the respective buttons. The buttons lead to a popup that contain the link and a QR code. AI analysis and autofill buttons exist at the top of the schedule page and offer a convenient feature that no other travel planners provide.
 
-If you would like to view a map of your trip, in the page for the specific trip, go to the bottom where it says **View Trip Map** and click on the button. You can click on the pins to go to the schedule for that day.
+If you would like to view a map of your trip, in the page for the specific trip, go to the bottom where it says **View Trip Map** and click on the button. You can click on the pins to go to the schedule for that day. If you click on the pins, all the activities for that day will appear at its location.
+
+During trip creation, you can set the currency used for the trip. If you set the wrong currency, go to the circular `$` button at the top right in your trip to change it. In this popup, you can see how much each person in the group should pay, if your trip is in a group.
+
+If you would like to switch the plans between two days, click on the `Switch days` checkbox right above the day tiles in your trip. Then select the two days, and click `Confirm Switch`.
 
 **The AI and Weather APIs rely on Render, and if Render has been inactive for some time, then it will take up to a few minutes for Render to "wake up". This causes the first AI/Weather API call after user inactivity to take up to a few minutes sometimes.**
 
 If the site is not live at the time that you see this or if you have any questions, then please view this video demonstration here: https://www.youtube.com/watch?v=5UguLbktGI0
+
+To see the hosting setup, see this video: https://youtu.be/Mx6kIeurxv0?si=c_qRPlqPfiFbAwtp&t=1548
 
 ## Features
 * **Add/Edit Trips, Dates, and Travel Activities**: Users can detail an activity's name, location (map selection with search), time, and expected/actual cost.
