@@ -26,7 +26,7 @@ To see the video showcasing these updates, see: https://www.youtube.com/watch?v=
 * Below is an example of a trip map for a five-day Spain trip:
 ![tripmap-example](images/tripmap-example.png)
 
-## 6/24/2026
+### 6/24/2026
 * In the trip map, clicking on a day pin will bring up all the activity pins at their locations for that day. Route lines between each activity appear as well.
 
 * Users can now share trips to others. Shared users will have edit access, which allows collaboration.
